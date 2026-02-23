@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 10% 97%;
+    --foreground: 0 20% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 20% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 20% 12%;
+
+    --primary: 358 44% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 358 20% 92%;
+    --secondary-foreground: 358 44% 42%;
+
+    --muted: 0 8% 93%;
+    --muted-foreground: 0 8% 48%;
+
+    --accent: 359 58% 62%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 8% 90%;
+    --input: 0 8% 88%;
+    --ring: 358 44% 52%;
+
+    --radius: 0.75rem;
+
+    /* Crisis severity tokens */
+    --crisis-critical: 0 80% 50%;
+    --crisis-high: 25 95% 53%;
+    --crisis-medium: 45 93% 47%;
+    --crisis-low: 142 71% 45%;
+    --crisis-resolved: 210 16% 60%;
+
+    /* Semantic */
+    --success: 142 71% 45%;
+    --warning: 45 93% 47%;
+    --info: 210 60% 50%;
+
+    --pulse-color: 358 44% 52%;
+
+    --sidebar-background: 0 20% 8%;
+    --sidebar-foreground: 0 8% 78%;
+    --sidebar-primary: 358 44% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 14% 14%;
+    --sidebar-accent-foreground: 0 8% 92%;
+    --sidebar-border: 0 10% 16%;
+    --sidebar-ring: 358 44% 52%;
+    --sidebar-muted: 0 8% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .crisis-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  }
+  .glass-card {
+    @apply bg-card/90 backdrop-blur-md border border-border/60 shadow-sm;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes pulse-alert {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-alert {
+  animation: pulse-alert 2s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.35s ease-out forwards;
+}
