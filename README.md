@@ -3,7 +3,7 @@
 
 # 🚀 Nome do Projeto
 
-Breve descrição do projeto (ex: "Dashboard de vendas com React e Tailwind CSS").
+Breve descrição do projeto (ex: "Dashboard de Alertas SIGEM com React e Tailwind CSS").
 
 ## 🛠️ Tecnologias
 
