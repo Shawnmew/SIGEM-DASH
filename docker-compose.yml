@@ -1,0 +1,49 @@
+# ============================================
+# Docker Compose — SIGEM-DASH
+# ============================================
+# Usage:
+#   Development:  docker compose up dev
+#   Production:   docker compose up prod
+#   Build prod:   docker compose build prod
+# ============================================
+
+services:
+  # ------------------------------------------
+  # Development — hot reload with Vite
+  # ------------------------------------------
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: sigem-dash-dev
+    ports:
+      - "3000:8080"
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      # Anonymous volume to preserve node_modules from the image
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+  # ------------------------------------------
+  # Production — optimized nginx build
+  # ------------------------------------------
+  prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+    container_name: sigem-dash-prod
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
