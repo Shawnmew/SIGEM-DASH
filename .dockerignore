@@ -9,7 +9,6 @@ build
 .vscode
 .idea
 .DS_Store
-supabase/.temp
 coverage
 *.log
 npm-debug.log*

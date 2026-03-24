@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Users, MapPin, Phone, CheckCircle } from "lucide-react";
 
@@ -17,6 +18,29 @@ const statusBadge: Record<string, { label: string; className: string }> = {
 };
 
 const VoluntariosPage = () => {
+  const [selectedVolunteer, setSelectedVolunteer] = useState<any | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleCardClick = (vol: any) => {
+    setSelectedVolunteer(vol);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedVolunteer(null);
+  };
+
+  const handleEdit = () => {
+    // lógica de edição (abrir formulário, etc)
+    alert("Editar voluntário: " + selectedVolunteer?.name);
+  };
+
+  const handleRemove = () => {
+    // lógica de remoção (API ou mock)
+    alert("Remover voluntário: " + selectedVolunteer?.name);
+  };
+
   return (
     <AppLayout>
       <div className="mb-6 pl-12 lg:pl-0">
@@ -37,7 +61,11 @@ const VoluntariosPage = () => {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {volunteers.map((vol) => (
-          <div key={vol.id} className="rounded-xl border border-border bg-card p-4 animate-slide-up hover:shadow-md transition-shadow">
+          <div
+            key={vol.id}
+            className="rounded-xl border border-border bg-card p-4 animate-slide-up hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => handleCardClick(vol)}
+          >
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full crisis-gradient flex items-center justify-center text-primary-foreground font-bold text-sm">
                 {vol.name.split(" ").map(n => n[0]).join("")}
@@ -57,6 +85,28 @@ const VoluntariosPage = () => {
           </div>
         ))}
       </div>
+
+      {isModalOpen && selectedVolunteer && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-2">{selectedVolunteer.name}</h2>
+            <p className="text-sm text-muted-foreground mb-4">{selectedVolunteer.specialty}</p>
+            <div className="flex gap-2 mb-4">
+              <span className="bg-crisis-low/10 text-crisis-low px-3 py-1.5 rounded-full font-semibold">
+                {selectedVolunteer.region}
+              </span>
+              <span className="bg-muted text-muted-foreground px-3 py-1.5 rounded-full font-semibold">
+                {selectedVolunteer.missions} missões
+              </span>
+            </div>
+            <div className="flex gap-4">
+              <button className="bg-primary text-white px-4 py-2 rounded" onClick={handleEdit}>Editar</button>
+              <button className="bg-destructive text-white px-4 py-2 rounded" onClick={handleRemove}>Remover</button>
+              <button className="bg-muted text-muted-foreground px-4 py-2 rounded" onClick={handleCloseModal}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 };

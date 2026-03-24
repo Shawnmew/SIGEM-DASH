@@ -36,5 +36,3 @@ vite.config.ts.timestamp-*
 # Testing
 coverage/
 
-# Supabase local
-supabase/.temp/

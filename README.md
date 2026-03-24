@@ -51,4 +51,6 @@ src/
 
 ---
 
-> **Variáveis de ambiente:** copie `.env.example` para `.env` e preencha as chaves necessárias.
+> **Variáveis de ambiente:** copie `.env.example` para `.env` e preencha as chaves necessárias, incluindo `VITE_API_URL` apontando para a instância da **SIGEM-API** (ex.: `http://localhost:8001/api/v1`).
+> 
+> A aplicação usa o token Bearer retornado pela API para autenticação e o guarda em `localStorage`.

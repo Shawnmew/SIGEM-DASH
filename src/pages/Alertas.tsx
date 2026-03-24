@@ -24,6 +24,27 @@ const alertStyles: Record<string, string> = {
 };
 
 const AlertasPage = () => {
+  const { data, isLoading } = useQuery(
+    ["alertas"],
+    async () => {
+      const res = await api.get("/user/alertas");
+      return res.data;
+    }
+  );
+
+  const alertas: any[] = data?.data ?? [];
+  const naoLidos: number = data?.meta?.nao_lidos ?? 0;
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="mb-6 pl-12 lg:pl-0">
@@ -35,34 +56,47 @@ const AlertasPage = () => {
             </p>
           </div>
           <span className="bg-primary/10 text-primary text-xs font-semibold px-3 py-1.5 rounded-full">
-            {allAlerts.filter(a => !a.read).length} não lido(s)
+            {naoLidos} não lido(s)
           </span>
         </div>
       </div>
 
       <div className="space-y-3 max-w-3xl">
-        {allAlerts.map((alert) => {
-          const Icon = alertIcons[alert.severity];
+        {alertas.map((alert: any) => {
+          // adapt server fields to frontend naming
+          const severity = alert.tipo || alert.severity || "info";
+          const Icon = alertIcons[severity];
+          const read = alert.lido;
+          const title = alert.titulo || alert.title;
+          const description = alert.descricao || alert.description;
+          const time = new Date(alert.created_at).toLocaleString();
+
           return (
             <div
               key={alert.id}
-              className={`rounded-xl border border-border border-l-4 ${alertStyles[alert.severity]} bg-card p-4 animate-slide-up ${
-                !alert.read ? "bg-card" : "opacity-70"
+              className={`rounded-xl border border-border border-l-4 ${alertStyles[severity]} bg-card p-4 animate-slide-up ${
+                !read ? "bg-card" : "opacity-70"
               }`}
             >
               <div className="flex items-start gap-3">
-                <Icon className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-                  alert.severity === "critical" ? "text-crisis-critical animate-pulse-alert" :
-                  alert.severity === "high" ? "text-crisis-high" :
-                  alert.severity === "resolved" ? "text-crisis-low" : "text-info"
-                }`} />
+                <Icon
+                  className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                    severity === "critical"
+                      ? "text-crisis-critical animate-pulse-alert"
+                      : severity === "high"
+                      ? "text-crisis-high"
+                      : severity === "resolved"
+                      ? "text-crisis-low"
+                      : "text-info"
+                  }`}
+                />
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-bold">{alert.title}</h3>
-                    {!alert.read && <span className="w-2 h-2 rounded-full bg-primary" />}
+                    <h3 className="text-sm font-bold">{title}</h3>
+                    {!read && <span className="w-2 h-2 rounded-full bg-primary" />}
                   </div>
-                  <p className="text-xs text-muted-foreground mb-1">{alert.description}</p>
-                  <p className="text-[10px] text-muted-foreground">{alert.time}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{description}</p>
+                  <p className="text-[10px] text-muted-foreground">{time}</p>
                 </div>
               </div>
             </div>

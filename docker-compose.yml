@@ -28,6 +28,7 @@ services:
       - .env
     environment:
       - NODE_ENV=development
+      - VITE_API_URL=${VITE_API_URL}
     restart: unless-stopped
 
   # ------------------------------------------
@@ -46,4 +47,5 @@ services:
       - "80:80"
     environment:
       - NODE_ENV=production
+      - VITE_API_URL=${VITE_API_URL}
     restart: unless-stopped

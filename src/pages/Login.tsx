@@ -1,18 +1,21 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Shield, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoginPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [nome, setNome] = useState("");
+  const [sobrenome, setSobrenome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+  const { signIn, register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,27 +24,47 @@ const LoginPage = () => {
     setMessage("");
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: window.location.origin,
-        },
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        setMessage("Verifique o seu email para confirmar o registo.");
+      if (password !== confirmPassword) {
+        setError("As palavras‑passe não coincidem.");
+        setLoading(false);
+        return;
+      }
+      try {
+        await register({
+          nome,
+          sobrenome,
+          email,
+          password,
+          password_confirmation: password,
+        });
+        navigate("/");
+      } catch (err: any) {
+        // network errors don't have response, show details for debugging
+        if (!err.response) {
+          setError(
+            `Network error: não foi possível contactar API. Ver console para mais detalhes.`
+          );
+          console.error("login network error", err.toJSON ? err.toJSON() : err);
+        } else {
+          setError(
+            err.response?.data?.message ||
+              JSON.stringify(err.response?.data?.errors) ||
+              err.message ||
+              "Erro ao registar"
+          );
+        }
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError(error.message);
-      } else {
+      try {
+        await signIn(email, password);
         navigate("/");
+      } catch (err: any) {
+        setError(
+          err.response?.data?.message || err.message || "Credenciais inválidas"
+        );
       }
     }
+
     setLoading(false);
   };
 
@@ -106,17 +129,48 @@ const LoginPage = () => {
             {isSignUp && (
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Nome Completo
+                  Confirmar palavra-passe
                 </label>
                 <input
-                  type="text"
+                  type="password"
                   required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Ex: Ana Ferreira"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repita a palavra-passe"
+                  minLength={6}
                   className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
                 />
               </div>
+            )}
+            {isSignUp && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Ex: Ana"
+                    className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-2 block uppercase tracking-wide">
+                    Sobrenome
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={sobrenome}
+                    onChange={(e) => setSobrenome(e.target.value)}
+                    placeholder="Ex: Ferreira"
+                    className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
+                  />
+                </div>
+              </>
             )}
 
             <div>
