@@ -19,6 +19,15 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { title: "Painel", icon: LayoutDashboard, path: "/" },
+  { title: "Usuários", icon: Shield, path: "/usuarios" },
+  { title: "Verificações Usuários", icon: Shield, path: "/verificacoes-usuarios" },
+  { title: "Penalizações", icon: Shield, path: "/penalizacoes" },
+  { title: "Entidades", icon: FileText, path: "/entidades" },
+  { title: "Validações Incidentes", icon: AlertTriangle, path: "/validacoes-incidentes" },
+  { title: "Atribuições", icon: Users, path: "/atribuicoes" },
+  { title: "Regiões", icon: MapPin, path: "/regioes" },
+  { title: "Termos Voluntariado", icon: FileText, path: "/termos-voluntariado" },
+  { title: "Logs USSD", icon: FileText, path: "/logs-ussd" },
   { title: "Crises Ativas", icon: AlertTriangle, path: "/crises" },
   { title: "Reportar", icon: Plus, path: "/reportar" },
   { title: "Mapa de Risco", icon: MapPin, path: "/mapa" },
