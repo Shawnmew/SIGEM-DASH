@@ -182,30 +182,6 @@ const EntidadesPage = () => {
             </DialogContent>
           </Dialog>
         </div>
-          <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Filtrar por tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="publica">Pública</SelectItem>
-              <SelectItem value="privada">Privada</SelectItem>
-              <SelectItem value="ong">ONG</SelectItem>
-              <SelectItem value="comunitaria">Comunitária</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={status} onValueChange={value => { setStatus(value); setPage(1); }}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="ativa">Ativa</SelectItem>
-              <SelectItem value="suspensa">Suspensa</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="submit" size="sm">Buscar</Button>
-        </form>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
