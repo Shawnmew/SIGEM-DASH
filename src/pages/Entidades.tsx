@@ -98,13 +98,13 @@ const EntidadesPage = () => {
         <p className="text-sm text-muted-foreground mt-1">Gestão de entidades promotoras do sistema</p>
       </div>
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
-          <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center m-0 p-0">
+        <div className="flex flex-wrap gap-2 mb-4 items-center w-full">
+          <form onSubmit={handleSearch} className="flex flex-1 flex-nowrap gap-2 items-center min-w-0">
             <Input
               placeholder="Buscar por nome, email ou telefone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="max-w-xs"
+              className="max-w-xs flex-shrink"
             />
             <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
               <SelectTrigger className="w-44">
@@ -130,57 +130,59 @@ const EntidadesPage = () => {
             </Select>
             <Button type="submit" size="sm">Buscar</Button>
           </form>
-          <Dialog open={showCreate} onOpenChange={setShowCreate}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setShowCreate(true)}>Cadastrar Nova Entidade</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Cadastrar Nova Entidade</DialogTitle>
-              </DialogHeader>
-              <form className="space-y-2" onSubmit={async e => {
-                e.preventDefault();
-                try {
-                  await api.post("/admin/entities", {
-                    nome: newEntity.nome,
-                    tipo: newEntity.tipo,
-                    email: newEntity.email,
-                    telefone: newEntity.telefone,
-                    regiao: newEntity.regiao,
-                    status: newEntity.status,
-                  });
-                  setShowCreate(false);
-                  setNewEntity({ id: 0, nome: "", tipo: "publica", status: "ativa", regiao: "", email: "", telefone: "" });
-                  fetchEntidades(1, search, tipo, status);
-                  setPage(1);
-                } catch (err) {
-                  alert("Erro ao cadastrar entidade. Verifique os dados e tente novamente.");
-                }
-              }}>
-                <Input value={newEntity.nome} onChange={e => setNewEntity({ ...newEntity, nome: e.target.value })} placeholder="Nome" required />
-                <Select value={newEntity.tipo} onValueChange={value => setNewEntity({ ...newEntity, tipo: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="publica">Pública</SelectItem>
-                    <SelectItem value="privada">Privada</SelectItem>
-                    <SelectItem value="ong">ONG</SelectItem>
-                    <SelectItem value="comunitaria">Comunitária</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input value={newEntity.email} onChange={e => setNewEntity({ ...newEntity, email: e.target.value })} placeholder="Email" />
-                <Input value={newEntity.telefone} onChange={e => setNewEntity({ ...newEntity, telefone: e.target.value })} placeholder="Telefone" />
-                <Input value={newEntity.regiao} onChange={e => setNewEntity({ ...newEntity, regiao: e.target.value })} placeholder="Região" />
-                <DialogFooter>
-                  <Button type="submit">Cadastrar</Button>
-                  <DialogClose asChild>
-                    <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <div className="flex-none">
+            <Dialog open={showCreate} onOpenChange={setShowCreate}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setShowCreate(true)}>Cadastrar Nova Entidade</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Cadastrar Nova Entidade</DialogTitle>
+                </DialogHeader>
+                <form className="space-y-2" onSubmit={async e => {
+                  e.preventDefault();
+                  try {
+                    await api.post("/admin/entities", {
+                      nome: newEntity.nome,
+                      tipo: newEntity.tipo,
+                      email: newEntity.email,
+                      telefone: newEntity.telefone,
+                      regiao: newEntity.regiao,
+                      status: newEntity.status,
+                    });
+                    setShowCreate(false);
+                    setNewEntity({ id: 0, nome: "", tipo: "publica", status: "ativa", regiao: "", email: "", telefone: "" });
+                    fetchEntidades(1, search, tipo, status);
+                    setPage(1);
+                  } catch (err) {
+                    alert("Erro ao cadastrar entidade. Verifique os dados e tente novamente.");
+                  }
+                }}>
+                  <Input value={newEntity.nome} onChange={e => setNewEntity({ ...newEntity, nome: e.target.value })} placeholder="Nome" required />
+                  <Select value={newEntity.tipo} onValueChange={value => setNewEntity({ ...newEntity, tipo: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="publica">Pública</SelectItem>
+                      <SelectItem value="privada">Privada</SelectItem>
+                      <SelectItem value="ong">ONG</SelectItem>
+                      <SelectItem value="comunitaria">Comunitária</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input value={newEntity.email} onChange={e => setNewEntity({ ...newEntity, email: e.target.value })} placeholder="Email" />
+                  <Input value={newEntity.telefone} onChange={e => setNewEntity({ ...newEntity, telefone: e.target.value })} placeholder="Telefone" />
+                  <Input value={newEntity.regiao} onChange={e => setNewEntity({ ...newEntity, regiao: e.target.value })} placeholder="Região" />
+                  <DialogFooter>
+                    <Button type="submit">Cadastrar</Button>
+                    <DialogClose asChild>
+                      <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <Table>
