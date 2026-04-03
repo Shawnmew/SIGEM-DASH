@@ -1,7 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface Usuario {
   id: number;
@@ -19,6 +22,9 @@ interface Usuario {
   telefone: string;
   status: string;
   tipo?: string;
+  municipio?: string;
+  municipio_id?: number;
+  created_at?: string;
 }
 
 interface Meta {
@@ -30,15 +36,41 @@ interface Meta {
   to: number;
 }
 
+interface FormErrors {
+  nome?: string;
+  sobrenome?: string;
+  email?: string;
+  password?: string;
+  password_confirmation?: string;
+  telefone?: string;
+  tipo?: string;
+  municipio_id?: string;
+}
+
+interface NewUser {
+  nome: string;
+  sobrenome: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+  telefone: string;
+  tipo: string;
+  municipio_id: string;
+  status: string;
+}
+
 const UsuariosPage = () => {
+  const { user: currentUser, loading: authLoading, isAdmin } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [tipo, setTipo] = useState<string>("all");
+  const [status, setStatus] = useState<string>("all");
+  const [municipios, setMunicipios] = useState<any[]>([]);
+  const [loadingMunicipios, setLoadingMunicipios] = useState(false);
 
-  // Dialog states
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -46,15 +78,46 @@ const UsuariosPage = () => {
   const [penaltyReason, setPenaltyReason] = useState("");
   const [showApprove, setShowApprove] = useState(false);
   const [statusToApprove, setStatusToApprove] = useState<string>("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  
+  const [newUser, setNewUser] = useState<NewUser>({
+    nome: "",
+    sobrenome: "",
+    email: "",
+    password: "",
+    password_confirmation: "",
+    telefone: "",
+    tipo: "cidadao",
+    municipio_id: "",
+    status: "pendente"
+  });
 
-  const fetchUsuarios = async (pageNum = 1, searchTerm = "", tipoFiltro = "all") => {
+  // Redirecionar se não for admin
+  if (!authLoading && !isAdmin) {
+    toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
+    return <Navigate to="/" replace />;
+  }
+
+  const fetchMunicipios = async () => {
+    setLoadingMunicipios(true);
+    try {
+      const response = await api.get("/municipios");
+      setMunicipios(response.data.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar municípios:", error);
+    } finally {
+      setLoadingMunicipios(false);
+    }
+  };
+
+  const fetchUsuarios = async (pageNum = 1, searchTerm = "", tipoFiltro = "all", statusFiltro = "all") => {
     setLoading(true);
     try {
-      const params: any = {
-        page: pageNum,
-        search: searchTerm,
-      };
+      const params: any = { page: pageNum, search: searchTerm };
       if (tipoFiltro && tipoFiltro !== "all") params.tipo = tipoFiltro;
+      if (statusFiltro && statusFiltro !== "all") params.status = statusFiltro;
+      
       const res = await api.get("/admin/users", { params });
       setUsuarios(res.data.data.users.data || []);
       setMeta({
@@ -66,217 +129,315 @@ const UsuariosPage = () => {
         to: res.data.data.users.to,
       });
     } catch (e) {
+      console.error("Erro ao carregar usuários:", e);
       setUsuarios([]);
       setMeta(null);
+      toast.error("Erro ao carregar usuários");
     } finally {
       setLoading(false);
     }
   };
 
-
   useEffect(() => {
-    fetchUsuarios(page, search, tipo);
-    // eslint-disable-next-line
-  }, [page, tipo]);
-
+    if (isAdmin) {
+      fetchUsuarios(page, search, tipo, status);
+      fetchMunicipios();
+    }
+  }, [page, tipo, status, isAdmin]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    fetchUsuarios(1, search, tipo);
+    fetchUsuarios(1, search, tipo, status);
   };
+
+  const validateForm = () => {
+    const errors: FormErrors = {};
+    
+    if (!newUser.nome.trim()) errors.nome = "Nome é obrigatório";
+    if (!newUser.sobrenome.trim()) errors.sobrenome = "Sobrenome é obrigatório";
+    if (!newUser.email.trim()) errors.email = "Email é obrigatório";
+    else if (!/\S+@\S+\.\S+/.test(newUser.email)) errors.email = "Email inválido";
+    
+    if (!newUser.password) errors.password = "Senha é obrigatória";
+    else if (newUser.password.length < 6) errors.password = "Senha deve ter pelo menos 6 caracteres";
+    
+    if (!newUser.password_confirmation) errors.password_confirmation = "Confirmação de senha é obrigatória";
+    else if (newUser.password !== newUser.password_confirmation) errors.password_confirmation = "As senhas não conferem";
+    
+    if (!newUser.tipo) errors.tipo = "Tipo de usuário é obrigatório";
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    try {
+      const userData = {
+        nome: newUser.nome.trim(),
+        sobrenome: newUser.sobrenome.trim(),
+        email: newUser.email.trim(),
+        password: newUser.password,
+        password_confirmation: newUser.password_confirmation,
+        telefone: newUser.telefone?.trim() || null,
+        tipo: newUser.tipo,
+        municipio_id: newUser.municipio_id ? parseInt(newUser.municipio_id) : null,
+        status: newUser.status
+      };
+
+      const response = await api.post("/admin/users", userData);
+      
+      if (response.status === 201 || response.status === 200) {
+        setShowCreate(false);
+        setNewUser({
+          nome: "", sobrenome: "", email: "", password: "", password_confirmation: "",
+          telefone: "", tipo: "cidadao", municipio_id: "", status: "pendente"
+        });
+        setFormErrors({});
+        fetchUsuarios(1, search, tipo, status);
+        setPage(1);
+        toast.success("Usuário cadastrado com sucesso!");
+      }
+    } catch (err: any) {
+      if (err.response?.status === 422) {
+        const backendErrors = err.response.data.errors;
+        const newErrors: FormErrors = {};
+        if (backendErrors) {
+          Object.keys(backendErrors).forEach(key => {
+            newErrors[key as keyof FormErrors] = backendErrors[key][0];
+          });
+          setFormErrors(newErrors);
+        }
+        toast.error("Erro de validação: Verifique os campos destacados.");
+      } else if (err.response?.status === 409) {
+        toast.error("Email já cadastrado no sistema.");
+      } else {
+        toast.error("Erro ao cadastrar usuário.");
+      }
+    }
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+
+    try {
+      const updateData = {
+        nome: editUser.nome,
+        sobrenome: editUser.sobrenome,
+        email: editUser.email,
+        telefone: editUser.telefone,
+        tipo: editUser.tipo
+      };
+      
+      await api.put(`/admin/users/${editUser.id}`, updateData);
+      setShowEdit(false);
+      fetchUsuarios(page, search, tipo, status);
+      toast.success("Usuário atualizado com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao atualizar usuário.");
+    }
+  };
+
+  const handleStatusChange = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await api.patch(`/admin/users/${selectedUser.id}/status`, { status: statusToApprove });
+      setShowApprove(false);
+      fetchUsuarios(page, search, tipo, status);
+      toast.success(`Status alterado para ${statusToApprove} com sucesso!`);
+    } catch (err) {
+      toast.error("Erro ao alterar status.");
+    }
+  };
+
+  const handlePenalizeUser = async () => {
+    if (!selectedUser) return;
+    if (!penaltyReason.trim()) {
+      toast.error("Informe o motivo da penalização.");
+      return;
+    }
+
+    try {
+      await api.post(`/admin/users/${selectedUser.id}/penalize`, { reason: penaltyReason });
+      setShowPenalize(false);
+      setPenaltyReason("");
+      fetchUsuarios(page, search, tipo, status);
+      toast.success("Usuário penalizado com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao penalizar usuário.");
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (!confirm("Tem certeza que deseja remover este usuário?")) return;
+
+    try {
+      await api.delete(`/admin/users/${id}`);
+      fetchUsuarios(page, search, tipo, status);
+      toast.success("Usuário removido com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao remover usuário.");
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { label: string; className: string }> = {
+      activo: { label: "Ativo", className: "bg-green-100 text-green-800" },
+      inactivo: { label: "Inativo", className: "bg-gray-100 text-gray-800" },
+      bloqueado: { label: "Bloqueado", className: "bg-red-100 text-red-800" },
+      pendente: { label: "Pendente", className: "bg-yellow-100 text-yellow-800" }
+    };
+    const c = config[status] || config.pendente;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.className}`}>{c.label}</span>;
+  };
+
+  const getTipoBadge = (tipo: string) => {
+    const config: Record<string, { label: string; className: string }> = {
+      admin: { label: "Admin", className: "bg-purple-100 text-purple-800" },
+      operador: { label: "Operador", className: "bg-blue-100 text-blue-800" },
+      voluntario: { label: "Voluntário", className: "bg-green-100 text-green-800" },
+      cidadao: { label: "Cidadão", className: "bg-gray-100 text-gray-800" }
+    };
+    const c = config[tipo] || config.cidadao;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.className}`}>{c.label}</span>;
+  };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) return null;
 
   return (
     <AppLayout>
       <div className="mb-6 pl-12 lg:pl-0">
-        <h1 className="text-2xl font-extrabold">Usuários</h1>
-        <p className="text-sm text-muted-foreground mt-1">Gestão de usuários do sistema</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-extrabold flex items-center gap-2">
+              Usuários
+              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">Admin</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Gestão de usuários do sistema - Apenas administradores</p>
+          </div>
+          <span className="text-xs text-muted-foreground">Total: {meta?.total || 0} usuários</span>
+        </div>
       </div>
+      
       <div className="bg-white rounded-lg shadow p-4">
-        <form onSubmit={handleSearch} className="flex flex-wrap gap-2 mb-4 items-center">
-          <Input
-            placeholder="Buscar por nome, email ou telefone..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="max-w-xs"
-          />
-          <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Filtrar por tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="operador">Operador</SelectItem>
-              <SelectItem value="voluntario">Voluntário</SelectItem>
-              <SelectItem value="cidadao">Cidadão</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="submit" size="sm">Buscar</Button>
-        </form>
+        <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
+          <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
+            <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="w-64" />
+            <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Tipo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="operador">Operador</SelectItem>
+                <SelectItem value="voluntario">Voluntário</SelectItem>
+                <SelectItem value="cidadao">Cidadão</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={status} onValueChange={value => { setStatus(value); setPage(1); }}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="activo">Ativo</SelectItem>
+                <SelectItem value="inactivo">Inativo</SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="bloqueado">Bloqueado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit" size="sm">Buscar</Button>
+          </form>
+          
+          <Dialog open={showCreate} onOpenChange={setShowCreate}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary">+ Novo Usuário</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Cadastrar Novo Usuário</DialogTitle></DialogHeader>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Nome *</Label><Input value={newUser.nome} onChange={e => setNewUser({...newUser, nome: e.target.value})} className={formErrors.nome ? "border-red-500" : ""} />{formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}</div>
+                  <div><Label>Sobrenome *</Label><Input value={newUser.sobrenome} onChange={e => setNewUser({...newUser, sobrenome: e.target.value})} className={formErrors.sobrenome ? "border-red-500" : ""} />{formErrors.sobrenome && <p className="text-xs text-red-500">{formErrors.sobrenome}</p>}</div>
+                </div>
+                <div><Label>Email *</Label><Input type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className={formErrors.email ? "border-red-500" : ""} />{formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}</div>
+                <div><Label>Senha *</Label><Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className={formErrors.password ? "border-red-500" : ""} />{formErrors.password && <p className="text-xs text-red-500">{formErrors.password}</p>}</div>
+                <div><Label>Confirmar Senha *</Label><Input type="password" value={newUser.password_confirmation} onChange={e => setNewUser({...newUser, password_confirmation: e.target.value})} className={formErrors.password_confirmation ? "border-red-500" : ""} />{formErrors.password_confirmation && <p className="text-xs text-red-500">{formErrors.password_confirmation}</p>}</div>
+                <div><Label>Telefone</Label><Input value={newUser.telefone} onChange={e => setNewUser({...newUser, telefone: e.target.value})} placeholder="+244 9XX XXX XXX" /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Tipo *</Label><Select value={newUser.tipo} onValueChange={value => setNewUser({...newUser, tipo: value})}><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent><SelectItem value="admin">Administrador</SelectItem><SelectItem value="operador">Operador</SelectItem><SelectItem value="voluntario">Voluntário</SelectItem><SelectItem value="cidadao">Cidadão</SelectItem></SelectContent></Select>{formErrors.tipo && <p className="text-xs text-red-500">{formErrors.tipo}</p>}</div>
+                  <div><Label>Status</Label><Select value={newUser.status} onValueChange={value => setNewUser({...newUser, status: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem></SelectContent></Select></div>
+                </div>
+                <div><Label>Município</Label><Select value={newUser.municipio_id || "none"} onValueChange={value => setNewUser({...newUser, municipio_id: value === "none" ? "" : value})}><SelectTrigger><SelectValue placeholder="Selecione o município" /></SelectTrigger><SelectContent className="max-h-64"><SelectItem value="none">Nenhum</SelectItem>{municipios.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nome}</SelectItem>)}</SelectContent></Select></div>
+                <DialogFooter><Button type="submit">Cadastrar</Button><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button></DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+        
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
+              <TableRow><TableHead>ID</TableHead><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>Telefone</TableHead><TableHead>Tipo</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">Carregando...</TableCell>
-                </TableRow>
-              ) : usuarios.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">Nenhum usuário encontrado.</TableCell>
-                </TableRow>
-              ) : usuarios.map(usuario => (
+              {loading ? <TableRow><TableCell colSpan={7} className="text-center py-8"><div className="flex justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div><span className="ml-2">Carregando...</span></div></TableCell></TableRow>
+              : usuarios.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-8">Nenhum usuário encontrado.</TableCell></TableRow>
+              : usuarios.map(usuario => (
                 <TableRow key={usuario.id}>
                   <TableCell>{usuario.id}</TableCell>
-                  <TableCell>{usuario.nome} {usuario.sobrenome}</TableCell>
+                  <TableCell className="font-medium">{usuario.nome} {usuario.sobrenome}</TableCell>
                   <TableCell>{usuario.email}</TableCell>
-                  <TableCell>{usuario.telefone}</TableCell>
-                  <TableCell>{usuario.tipo || "-"}</TableCell>
-                  <TableCell>{usuario.status}</TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => setSelectedUser(usuario)}>Ver</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Detalhes do Usuário</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-2">
-                          <div><b>ID:</b> {selectedUser?.id}</div>
-                          <div><b>Nome:</b> {selectedUser?.nome} {selectedUser?.sobrenome}</div>
-                          <div><b>Email:</b> {selectedUser?.email}</div>
-                          <div><b>Telefone:</b> {selectedUser?.telefone}</div>
-                          <div><b>Status:</b> {selectedUser?.status}</div>
-                        </div>
-                        <DialogFooter>
-                          <DialogClose asChild>
-                            <Button variant="outline">Fechar</Button>
-                          </DialogClose>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => { setEditUser(usuario); setShowEdit(true); }}>Editar</Button>
-                      </DialogTrigger>
-                      {showEdit && editUser?.id === usuario.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Editar Usuário</DialogTitle>
-                          </DialogHeader>
-                          <form className="space-y-2" onSubmit={e => { e.preventDefault(); /* implementar update */ setShowEdit(false); }}>
-                            <Input value={editUser.nome} onChange={e => setEditUser({ ...editUser, nome: e.target.value })} placeholder="Nome" />
-                            <Input value={editUser.sobrenome} onChange={e => setEditUser({ ...editUser, sobrenome: e.target.value })} placeholder="Sobrenome" />
-                            <Input value={editUser.email} onChange={e => setEditUser({ ...editUser, email: e.target.value })} placeholder="Email" />
-                            <Input value={editUser.telefone} onChange={e => setEditUser({ ...editUser, telefone: e.target.value })} placeholder="Telefone" />
-                            <DialogFooter>
-                              <Button type="submit">Salvar</Button>
-                              <DialogClose asChild>
-                                <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
-                              </DialogClose>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      )}
-                    </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedUser(usuario); setStatusToApprove(usuario.status); }}>Aprovar</Button>
-                      </DialogTrigger>
-                      {showApprove && selectedUser?.id === usuario.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Aprovar/Alterar Status</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-2">
-                            <Select value={statusToApprove} onValueChange={setStatusToApprove}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ativo">Ativo</SelectItem>
-                                <SelectItem value="suspenso">Suspenso</SelectItem>
-                                <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <DialogFooter>
-                            <Button onClick={() => { /* implementar aprovação/status */ setShowApprove(false); }}>Salvar</Button>
-                            <DialogClose asChild>
-                              <Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      )}
-                    </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => { setShowPenalize(true); setSelectedUser(usuario); }}>Penalizar</Button>
-                      </DialogTrigger>
-                      {showPenalize && selectedUser?.id === usuario.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Penalizar Usuário</DialogTitle>
-                          </DialogHeader>
-                          <Textarea placeholder="Motivo da penalização" value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} />
-                          <DialogFooter>
-                            <Button onClick={() => { /* implementar penalização */ setShowPenalize(false); setPenaltyReason(""); }}>Penalizar</Button>
-                            <DialogClose asChild>
-                              <Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      )}
-                    </Dialog>
-                    <Button size="sm" variant="destructive" onClick={() => { /* implementar remoção */ }}>Remover</Button>
+                  <TableCell>{usuario.telefone || "-"}</TableCell>
+                  <TableCell>{getTipoBadge(usuario.tipo || "cidadao")}</TableCell>
+                  <TableCell>{getStatusBadge(usuario.status)}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    {/* Ver */}
+                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedUser(usuario)}>Ver</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader><div className="space-y-2"><div><b>ID:</b> {selectedUser?.id}</div><div><b>Nome:</b> {selectedUser?.nome} {selectedUser?.sobrenome}</div><div><b>Email:</b> {selectedUser?.email}</div><div><b>Telefone:</b> {selectedUser?.telefone || "-"}</div><div><b>Tipo:</b> {selectedUser?.tipo || "Cidadão"}</div><div><b>Status:</b> {getStatusBadge(selectedUser?.status || "pendente")}</div></div><DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    
+                    {/* Editar */}
+                    <Dialog open={showEdit && editUser?.id === usuario.id} onOpenChange={setShowEdit}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditUser(usuario); setShowEdit(true); }}>Editar</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader><form onSubmit={handleUpdateUser} className="space-y-3"><Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" /><Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" /><Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" /><Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" /><Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="operador">Operador</SelectItem><SelectItem value="voluntario">Voluntário</SelectItem><SelectItem value="cidadao">Cidadão</SelectItem></SelectContent></Select><DialogFooter><Button type="submit">Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose></DialogFooter></form></DialogContent></Dialog>
+                    
+                    {/* Status */}
+                    <Dialog open={showApprove && selectedUser?.id === usuario.id} onOpenChange={setShowApprove}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedUser(usuario); setStatusToApprove(usuario.status); }}>Status</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader><Select value={statusToApprove} onValueChange={setStatusToApprove}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem><SelectItem value="pendente">Pendente</SelectItem></SelectContent></Select><DialogFooter><Button onClick={handleStatusChange}>Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    
+                    {/* Penalizar */}
+                    <Dialog open={showPenalize && selectedUser?.id === usuario.id} onOpenChange={setShowPenalize}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowPenalize(true); setSelectedUser(usuario); }}>Penalizar</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Penalizar Usuário</DialogTitle></DialogHeader><Textarea placeholder="Motivo da penalização..." value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} rows={4} /><DialogFooter><Button onClick={handlePenalizeUser}>Penalizar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    
+                    {/* Remover */}
+                    {currentUser?.id !== usuario.id && <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(usuario.id)}>Remover</Button>}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+        
         {meta && meta.last_page > 1 && (
           <Pagination className="mt-4">
             <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  aria-disabled={page === 1}
-                  tabIndex={page === 1 ? -1 : 0}
-                />
-              </PaginationItem>
-              {Array.from({ length: meta.last_page }, (_, i) => (
-                <PaginationItem key={i + 1}>
-                  <PaginationLink
-                    isActive={page === i + 1}
-                    onClick={() => setPage(i + 1)}
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setPage(p => Math.min(meta.last_page, p + 1))}
-                  aria-disabled={page === meta.last_page}
-                  tabIndex={page === meta.last_page ? -1 : 0}
-                />
-              </PaginationItem>
+              <PaginationItem><PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} /></PaginationItem>
+              {Array.from({ length: Math.min(meta.last_page, 7) }, (_, i) => {
+                let pageNum = i + 1;
+                if (pageNum <= meta.last_page && pageNum > 0) return <PaginationItem key={pageNum}><PaginationLink isActive={page === pageNum} onClick={() => setPage(pageNum)}>{pageNum}</PaginationLink></PaginationItem>;
+                return null;
+              })}
+              <PaginationItem><PaginationNext onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} className={page === meta.last_page ? "pointer-events-none opacity-50" : "cursor-pointer"} /></PaginationItem>
             </PaginationContent>
           </Pagination>
         )}
+        
+        {meta && <div className="mt-4 text-xs text-muted-foreground text-center">Mostrando {meta.from} a {meta.to} de {meta.total} usuários</div>}
       </div>
     </AppLayout>
   );

@@ -72,8 +72,8 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <h1 className="text-sm font-bold tracking-tight leading-none">SIGEC</h1>
-              <p className="text-[10px] text-sidebar-muted leading-none mt-0.5">Gestão de Crises</p>
+              <h1 className="text-sm font-bold tracking-tight leading-none">SIGEM</h1>
+              <p className="text-[10px] text-sidebar-muted leading-none mt-0.5">Gestão de Emergências</p>
             </div>
           )}
         </div>

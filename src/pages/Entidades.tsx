@@ -1,21 +1,17 @@
-
 import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
+
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogClose
-} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface Entidade {
   id: number;
@@ -25,6 +21,8 @@ interface Entidade {
   regiao?: string;
   email?: string;
   telefone?: string;
+  nif?: string;
+  municipio_id?: number;
 }
 
 interface Meta {
@@ -36,7 +34,16 @@ interface Meta {
   to: number;
 }
 
+interface FormErrors {
+  nome?: string;
+  nif?: string;
+  email?: string;
+  password?: string;
+  municipio_id?: string;
+}
+
 const EntidadesPage = () => {
+  const { isAdmin, loading: authLoading } = useAuth();
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,24 +51,39 @@ const EntidadesPage = () => {
   const [page, setPage] = useState(1);
   const [tipo, setTipo] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
-  // Dialog states
-  const [selectedEntity, setSelectedEntity] = useState<Entidade | null>(null);
-  const [editEntity, setEditEntity] = useState<Entidade | null>(null);
+  const [municipios, setMunicipios] = useState<any[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showApprove, setShowApprove] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<Entidade | null>(null);
+  const [editEntity, setEditEntity] = useState<Entidade | null>(null);
   const [statusToApprove, setStatusToApprove] = useState<string>("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [newEntity, setNewEntity] = useState<Entidade>({ id: 0, nome: "", tipo: "publica", status: "ativa", regiao: "", email: "", telefone: "" });
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  
+  const [newEntity, setNewEntity] = useState({
+    nome: "", nif: "", password: "", municipio_id: "", tipo: "publica", status: "pendente", email: "", telefone: ""
+  });
+
+  if (!authLoading && !isAdmin) {
+    toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
+    return <Navigate to="/" replace />;
+  }
+
+  const fetchMunicipios = async () => {
+    try {
+      const response = await api.get("/municipios");
+      setMunicipios(response.data.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar municípios:", error);
+    }
+  };
 
   const fetchEntidades = async (pageNum = 1, searchTerm = "", tipoFiltro = "all", statusFiltro = "all") => {
     setLoading(true);
     try {
-      const params: any = {
-        page: pageNum,
-        search: searchTerm,
-      };
-      if (tipoFiltro && tipoFiltro !== "all") params.tipo = tipoFiltro;
-      if (statusFiltro && statusFiltro !== "all") params.status = statusFiltro;
+      const params: any = { page: pageNum, search: searchTerm };
+      if (tipoFiltro !== "all") params.tipo = tipoFiltro;
+      if (statusFiltro !== "all") params.status = statusFiltro;
       const res = await api.get("/admin/entities", { params });
       setEntidades(res.data.data.entities.data || []);
       setMeta({
@@ -73,17 +95,21 @@ const EntidadesPage = () => {
         to: res.data.data.entities.to,
       });
     } catch (e) {
+      console.error("Erro ao carregar entidades:", e);
       setEntidades([]);
       setMeta(null);
+      toast.error("Erro ao carregar entidades");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEntidades(page, search, tipo, status);
-    // eslint-disable-next-line
-  }, [page, tipo, status]);
+    if (isAdmin) {
+      fetchEntidades(page, search, tipo, status);
+      fetchMunicipios();
+    }
+  }, [page, tipo, status, isAdmin]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,238 +117,177 @@ const EntidadesPage = () => {
     fetchEntidades(1, search, tipo, status);
   };
 
+  const validateForm = () => {
+    const errors: FormErrors = {};
+    if (!newEntity.nome.trim()) errors.nome = "Nome é obrigatório";
+    if (!newEntity.nif.trim()) errors.nif = "NIF é obrigatório";
+    if (!newEntity.email.trim()) errors.email = "Email é obrigatório";
+    else if (!/\S+@\S+\.\S+/.test(newEntity.email)) errors.email = "Email inválido";
+    if (!newEntity.password) errors.password = "Senha é obrigatória";
+    else if (newEntity.password.length < 6) errors.password = "Senha deve ter pelo menos 6 caracteres";
+    if (!newEntity.municipio_id) errors.municipio_id = "Município é obrigatório";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCreateEntity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    try {
+      const entityData = {
+        nome: newEntity.nome.trim(),
+        nif: newEntity.nif.trim(),
+        email: newEntity.email.trim(),
+        password: newEntity.password,
+        municipio_id: parseInt(newEntity.municipio_id),
+        tipo: newEntity.tipo,
+        telefone: newEntity.telefone?.trim() || null,
+        status: newEntity.status
+      };
+      await api.post("/admin/entities", entityData);
+      setShowCreate(false);
+      setNewEntity({ nome: "", nif: "", password: "", municipio_id: "", tipo: "publica", status: "pendente", email: "", telefone: "" });
+      setFormErrors({});
+      fetchEntidades(1, search, tipo, status);
+      setPage(1);
+      toast.success("Entidade cadastrada com sucesso!");
+    } catch (err: any) {
+      if (err.response?.status === 422) {
+        const backendErrors = err.response.data.errors;
+        const newErrors: FormErrors = {};
+        if (backendErrors) Object.keys(backendErrors).forEach(key => { newErrors[key as keyof FormErrors] = backendErrors[key][0]; });
+        setFormErrors(newErrors);
+        toast.error("Erro de validação: Verifique os campos destacados.");
+      } else {
+        toast.error("Erro ao cadastrar entidade.");
+      }
+    }
+  };
+
+  const handleUpdateEntity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editEntity) return;
+    try {
+      await api.put(`/admin/entities/${editEntity.id}`, { nome: editEntity.nome, email: editEntity.email, telefone: editEntity.telefone });
+      setShowEdit(false);
+      fetchEntidades(page, search, tipo, status);
+      toast.success("Entidade atualizada com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao atualizar entidade.");
+    }
+  };
+
+  const handleStatusChange = async () => {
+    if (!selectedEntity) return;
+    try {
+      await api.patch(`/admin/entities/${selectedEntity.id}/status`, { status: statusToApprove });
+      setShowApprove(false);
+      fetchEntidades(page, search, tipo, status);
+      toast.success(`Status alterado para ${statusToApprove}!`);
+    } catch (err) {
+      toast.error("Erro ao alterar status.");
+    }
+  };
+
+  const handleDeleteEntity = async (id: number) => {
+    if (!confirm("Tem certeza que deseja remover esta entidade?")) return;
+    try {
+      await api.delete(`/admin/entities/${id}`);
+      fetchEntidades(page, search, tipo, status);
+      toast.success("Entidade removida com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao remover entidade.");
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, string> = { activo: "bg-green-100 text-green-800", inactivo: "bg-gray-100 text-gray-800", bloqueado: "bg-red-100 text-red-800", pendente: "bg-yellow-100 text-yellow-800" };
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[status] || config.pendente}`}>{status === 'activo' ? 'Ativo' : status === 'inactivo' ? 'Inativo' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'}</span>;
+  };
+
+  if (authLoading) return <div className="flex min-h-screen items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  if (!isAdmin) return null;
+
   return (
     <AppLayout>
       <div className="mb-6 pl-12 lg:pl-0">
         <h1 className="text-2xl font-extrabold">Entidades Promotoras</h1>
         <p className="text-sm text-muted-foreground mt-1">Gestão de entidades promotoras do sistema</p>
       </div>
+      
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-wrap gap-2 mb-4 items-center w-full">
-          <form onSubmit={handleSearch} className="flex flex-1 flex-nowrap gap-2 items-center min-w-0">
-            <Input
-              placeholder="Buscar por nome, email ou telefone..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="max-w-xs flex-shrink"
-            />
-            <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="Filtrar por tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="publica">Pública</SelectItem>
-                <SelectItem value="privada">Privada</SelectItem>
-                <SelectItem value="ong">ONG</SelectItem>
-                <SelectItem value="comunitaria">Comunitária</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={status} onValueChange={value => { setStatus(value); setPage(1); }}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="Filtrar por status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="ativa">Ativa</SelectItem>
-                <SelectItem value="suspensa">Suspensa</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit" size="sm">Buscar</Button>
+        <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
+          <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
+            <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="w-64" />
+            <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}><SelectTrigger className="w-36"><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="publica">Pública</SelectItem><SelectItem value="privada">Privada</SelectItem><SelectItem value="ong">ONG</SelectItem><SelectItem value="associacao">Associação</SelectItem></SelectContent></Select>
+            <Select value={status} onValueChange={value => { setStatus(value); setPage(1); }}><SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem></SelectContent></Select>
+            <Button type="submit">Buscar</Button>
           </form>
-          <div className="flex-none">
-            <Dialog open={showCreate} onOpenChange={setShowCreate}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setShowCreate(true)}>Cadastrar Nova Entidade</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Nova Entidade</DialogTitle>
-                </DialogHeader>
-                <form className="space-y-2" onSubmit={async e => {
-                  e.preventDefault();
-                  try {
-                    await api.post("/admin/entities", {
-                      nome: newEntity.nome,
-                      tipo: newEntity.tipo,
-                      email: newEntity.email,
-                      telefone: newEntity.telefone,
-                      regiao: newEntity.regiao,
-                      status: newEntity.status,
-                    });
-                    setShowCreate(false);
-                    setNewEntity({ id: 0, nome: "", tipo: "publica", status: "ativa", regiao: "", email: "", telefone: "" });
-                    fetchEntidades(1, search, tipo, status);
-                    setPage(1);
-                  } catch (err) {
-                    alert("Erro ao cadastrar entidade. Verifique os dados e tente novamente.");
-                  }
-                }}>
-                  <Input value={newEntity.nome} onChange={e => setNewEntity({ ...newEntity, nome: e.target.value })} placeholder="Nome" required />
-                  <Select value={newEntity.tipo} onValueChange={value => setNewEntity({ ...newEntity, tipo: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="publica">Pública</SelectItem>
-                      <SelectItem value="privada">Privada</SelectItem>
-                      <SelectItem value="ong">ONG</SelectItem>
-                      <SelectItem value="comunitaria">Comunitária</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input value={newEntity.email} onChange={e => setNewEntity({ ...newEntity, email: e.target.value })} placeholder="Email" />
-                  <Input value={newEntity.telefone} onChange={e => setNewEntity({ ...newEntity, telefone: e.target.value })} placeholder="Telefone" />
-                  <Input value={newEntity.regiao} onChange={e => setNewEntity({ ...newEntity, regiao: e.target.value })} placeholder="Região" />
-                  <DialogFooter>
-                    <Button type="submit">Cadastrar</Button>
-                    <DialogClose asChild>
-                      <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-                    </DialogClose>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+          
+          <Dialog open={showCreate} onOpenChange={setShowCreate}>
+            <DialogTrigger asChild><Button>+ Nova Entidade</Button></DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Cadastrar Nova Entidade</DialogTitle></DialogHeader>
+              <form onSubmit={handleCreateEntity} className="space-y-4">
+                <div><Label>Nome *</Label><Input value={newEntity.nome} onChange={e => setNewEntity({...newEntity, nome: e.target.value})} className={formErrors.nome ? "border-red-500" : ""} />{formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}</div>
+                <div><Label>NIF *</Label><Input value={newEntity.nif} onChange={e => setNewEntity({...newEntity, nif: e.target.value})} className={formErrors.nif ? "border-red-500" : ""} />{formErrors.nif && <p className="text-xs text-red-500">{formErrors.nif}</p>}</div>
+                <div><Label>Email *</Label><Input type="email" value={newEntity.email} onChange={e => setNewEntity({...newEntity, email: e.target.value})} className={formErrors.email ? "border-red-500" : ""} />{formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}</div>
+                <div><Label>Senha *</Label><Input type="password" value={newEntity.password} onChange={e => setNewEntity({...newEntity, password: e.target.value})} className={formErrors.password ? "border-red-500" : ""} />{formErrors.password && <p className="text-xs text-red-500">{formErrors.password}</p>}</div>
+                <div><Label>Município *</Label><Select value={newEntity.municipio_id} onValueChange={value => setNewEntity({...newEntity, municipio_id: value})}><SelectTrigger className={formErrors.municipio_id ? "border-red-500" : ""}><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent className="max-h-64">{municipios.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nome}</SelectItem>)}</SelectContent></Select>{formErrors.municipio_id && <p className="text-xs text-red-500">{formErrors.municipio_id}</p>}</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Tipo</Label><Select value={newEntity.tipo} onValueChange={value => setNewEntity({...newEntity, tipo: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="publica">Pública</SelectItem><SelectItem value="privada">Privada</SelectItem><SelectItem value="ong">ONG</SelectItem><SelectItem value="associacao">Associação</SelectItem></SelectContent></Select></div>
+                  <div><Label>Status</Label><Select value={newEntity.status} onValueChange={value => setNewEntity({...newEntity, status: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem></SelectContent></Select></div>
+                </div>
+                <div><Label>Telefone</Label><Input value={newEntity.telefone} onChange={e => setNewEntity({...newEntity, telefone: e.target.value})} placeholder="+244 9XX XXX XXX" /></div>
+                <DialogFooter><Button type="submit">Cadastrar</Button><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button></DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
+        
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Região</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Status</TableHead><TableHead>Região</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">Carregando...</TableCell>
-                </TableRow>
-              ) : entidades.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">Nenhuma entidade encontrada.</TableCell>
-                </TableRow>
-              ) : entidades.map(entidade => (
-                <TableRow key={entidade.id}>
-                  <TableCell>{entidade.id}</TableCell>
-                  <TableCell>{entidade.nome}</TableCell>
-                  <TableCell>{entidade.tipo}</TableCell>
-                  <TableCell>{entidade.status}</TableCell>
-                  <TableCell>{entidade.regiao || "-"}</TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => setSelectedEntity(entidade)}>Ver</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Detalhes da Entidade</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-2">
-                          <div><b>ID:</b> {selectedEntity?.id}</div>
-                          <div><b>Nome:</b> {selectedEntity?.nome}</div>
-                          <div><b>Tipo:</b> {selectedEntity?.tipo}</div>
-                          <div><b>Status:</b> {selectedEntity?.status}</div>
-                          <div><b>Região:</b> {selectedEntity?.regiao || "-"}</div>
-                          <div><b>Email:</b> {selectedEntity?.email || "-"}</div>
-                          <div><b>Telefone:</b> {selectedEntity?.telefone || "-"}</div>
-                        </div>
-                        <DialogFooter>
-                          <DialogClose asChild>
-                            <Button variant="outline">Fechar</Button>
-                          </DialogClose>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => { setEditEntity(entidade); setShowEdit(true); }}>Editar</Button>
-                      </DialogTrigger>
-                      {showEdit && editEntity?.id === entidade.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Editar Entidade</DialogTitle>
-                          </DialogHeader>
-                          <form className="space-y-2" onSubmit={e => { e.preventDefault(); /* implementar update */ setShowEdit(false); }}>
-                            <Input value={editEntity.nome} onChange={e => setEditEntity({ ...editEntity, nome: e.target.value })} placeholder="Nome" />
-                            <Input value={editEntity.email} onChange={e => setEditEntity({ ...editEntity, email: e.target.value })} placeholder="Email" />
-                            <Input value={editEntity.telefone} onChange={e => setEditEntity({ ...editEntity, telefone: e.target.value })} placeholder="Telefone" />
-                            <DialogFooter>
-                              <Button type="submit">Salvar</Button>
-                              <DialogClose asChild>
-                                <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
-                              </DialogClose>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      )}
-                    </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedEntity(entidade); setStatusToApprove(entidade.status); }}>Aprovar/Suspender</Button>
-                      </DialogTrigger>
-                      {showApprove && selectedEntity?.id === entidade.id && (
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Aprovar/Suspender Entidade</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-2">
-                            <Select value={statusToApprove} onValueChange={setStatusToApprove}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ativa">Ativa</SelectItem>
-                                <SelectItem value="suspensa">Suspensa</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <DialogFooter>
-                            <Button onClick={() => { /* implementar aprovação/status */ setShowApprove(false); }}>Salvar</Button>
-                            <DialogClose asChild>
-                              <Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      )}
-                    </Dialog>
-                    <Button size="sm" variant="destructive" onClick={() => { /* implementar remoção */ }}>Remover</Button>
+              {loading ? <TableRow><TableCell colSpan={6} className="text-center py-8"><div className="flex justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div><span className="ml-2">Carregando...</span></div></TableCell></TableRow>
+              : entidades.length === 0 ? <TableRow><TableCell colSpan={6} className="text-center py-8">Nenhuma entidade encontrada.</TableCell></TableRow>
+              : entidades.map(entity => (
+                <TableRow key={entity.id}>
+                  <TableCell>{entity.id}</TableCell>
+                  <TableCell className="font-medium">{entity.nome}</TableCell>
+                  <TableCell>{entity.tipo}</TableCell>
+                  <TableCell>{getStatusBadge(entity.status)}</TableCell>
+                  <TableCell>{entity.regiao || "-"}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    {/* Ver */}
+                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedEntity(entity)}>Ver</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Detalhes da Entidade</DialogTitle></DialogHeader><div className="space-y-2"><div><b>ID:</b> {selectedEntity?.id}</div><div><b>Nome:</b> {selectedEntity?.nome}</div><div><b>Tipo:</b> {selectedEntity?.tipo}</div><div><b>Status:</b> {selectedEntity?.status}</div><div><b>Email:</b> {selectedEntity?.email || "-"}</div><div><b>Telefone:</b> {selectedEntity?.telefone || "-"}</div><div><b>NIF:</b> {selectedEntity?.nif || "-"}</div></div><DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    
+                    {/* Editar */}
+                    <Dialog open={showEdit && editEntity?.id === entity.id} onOpenChange={setShowEdit}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditEntity(entity); setShowEdit(true); }}>Editar</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Editar Entidade</DialogTitle></DialogHeader><form onSubmit={handleUpdateEntity} className="space-y-3"><Input value={editEntity?.nome || ""} onChange={e => setEditEntity(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" /><Input value={editEntity?.email || ""} onChange={e => setEditEntity(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" /><Input value={editEntity?.telefone || ""} onChange={e => setEditEntity(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" /><DialogFooter><Button type="submit">Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose></DialogFooter></form></DialogContent></Dialog>
+                    
+                    {/* Status */}
+                    <Dialog open={showApprove && selectedEntity?.id === entity.id} onOpenChange={setShowApprove}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedEntity(entity); setStatusToApprove(entity.status); }}>Status</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader><Select value={statusToApprove} onValueChange={setStatusToApprove}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem></SelectContent></Select><DialogFooter><Button onClick={handleStatusChange}>Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    
+                    {/* Remover */}
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteEntity(entity.id)}>Remover</Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+        
         {meta && meta.last_page > 1 && (
           <Pagination className="mt-4">
             <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  aria-disabled={page === 1}
-                  tabIndex={page === 1 ? -1 : 0}
-                />
-              </PaginationItem>
-              {Array.from({ length: meta.last_page }, (_, i) => (
-                <PaginationItem key={i + 1}>
-                  <PaginationLink
-                    isActive={page === i + 1}
-                    onClick={() => setPage(i + 1)}
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setPage(p => Math.min(meta.last_page, p + 1))}
-                  aria-disabled={page === meta.last_page}
-                  tabIndex={page === meta.last_page ? -1 : 0}
-                />
-              </PaginationItem>
+              <PaginationItem><PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} /></PaginationItem>
+              {Array.from({ length: Math.min(meta.last_page, 7) }, (_, i) => {
+                let pageNum = i + 1;
+                if (pageNum <= meta.last_page && pageNum > 0) return <PaginationItem key={pageNum}><PaginationLink isActive={page === pageNum} onClick={() => setPage(pageNum)}>{pageNum}</PaginationLink></PaginationItem>;
+                return null;
+              })}
+              <PaginationItem><PaginationNext onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} className={page === meta.last_page ? "pointer-events-none opacity-50" : "cursor-pointer"} /></PaginationItem>
             </PaginationContent>
           </Pagination>
         )}

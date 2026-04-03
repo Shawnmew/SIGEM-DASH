@@ -1,9 +1,15 @@
+// src/components/ProtectedRoute.tsx
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requireAdmin?: boolean;
+}
+
+export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+  const { user, loading, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -15,6 +21,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Se a rota requer admin, verificar se o usuário é admin
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

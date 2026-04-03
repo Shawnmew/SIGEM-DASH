@@ -1,85 +1,122 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import api from "@/lib/api";
+// src/contexts/AuthContext.tsx
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
-// shape is open since backend defines the fields; adjust as needed
-export interface UserData {
+interface User {
   id: number;
   nome: string;
-  sobrenome: string;
+  sobrenome?: string;
   email: string;
-  [key: string]: any;
+  tipo: string;
+  status: string;
+  user_type: 'admin' | 'entidade';
 }
 
 interface AuthContextType {
-  user: UserData | null;
+  user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  register: (payload: Record<string, any>) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
+  isAdmin: boolean;
+  isEntidade: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  // stubs
-  signIn: async () => {},
-  register: async () => {},
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserData | null>(null);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // when the provider mounts we attempt to restore session from localStorage
-  useEffect(() => {
-    const token = localStorage.getItem('sigem_token');
-    if (token) {
-      api
-        .get('/auth/me')
-        .then((res) => {
-          setUser(res.data.data.user);
-        })
-        .catch(() => {
-          // invalid token, clear it
-          localStorage.removeItem('sigem_token');
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
+  const isAdmin = user?.user_type === 'admin' && user?.tipo === 'admin';
+  const isEntidade = user?.user_type === 'entidade';
+
+  const loadUser = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await api.get('/auth/me');
+      
+      if (response.data.success) {
+        setUser(response.data.data);
+      } else {
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
+      }
+    } catch (error) {
+      console.error('Erro ao carregar usuário:', error);
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
+    } finally {
       setLoading(false);
     }
-  }, []);
-
-  const signIn = async (email: string, password: string) => {
-    const res = await api.post('/auth/login', { email, password });
-    const { token, user: u } = res.data.data;
-    localStorage.setItem('sigem_token', token);
-    setUser(u);
   };
 
-  const register = async (payload: Record<string, any>) => {
-    const res = await api.post('/auth/register', payload);
-    const { token, user: u } = res.data.data;
-    localStorage.setItem('sigem_token', token);
-    setUser(u);
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const signIn = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      
+      if (response.data.success) {
+        const { token, user: userData, user_type } = response.data.data;
+        
+        localStorage.setItem('token', token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        setUser({
+          ...userData,
+          user_type: user_type
+        });
+        
+        toast.success(`Bem-vindo, ${userData.nome}!`);
+        return true;
+      } else {
+        toast.error(response.data.message || 'Erro ao fazer login');
+        return false;
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Erro ao fazer login';
+      toast.error(message);
+      return false;
+    }
   };
 
   const signOut = async () => {
     try {
       await api.post('/auth/logout');
-    } catch {
-      // ignore network errors
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    } finally {
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
+      setUser(null);
+      toast.success('Logout realizado com sucesso');
     }
-    localStorage.removeItem('sigem_token');
-    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, register, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, isAdmin, isEntidade }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
