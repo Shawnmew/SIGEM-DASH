@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/authcontext";
 import { Navigate } from "react-router-dom";
 
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
@@ -93,7 +93,6 @@ const UsuariosPage = () => {
     status: "pendente"
   });
 
-  // Redirecionar se não for admin
   if (!authLoading && !isAdmin) {
     toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
     return <Navigate to="/" replace />;
@@ -103,9 +102,11 @@ const UsuariosPage = () => {
     setLoadingMunicipios(true);
     try {
       const response = await api.get("/municipios");
+      console.log("Municípios carregados:", response.data);
       setMunicipios(response.data.data || []);
     } catch (error) {
       console.error("Erro ao carregar municípios:", error);
+      toast.error("Erro ao carregar municípios");
     } finally {
       setLoadingMunicipios(false);
     }
@@ -115,8 +116,8 @@ const UsuariosPage = () => {
     setLoading(true);
     try {
       const params: any = { page: pageNum, search: searchTerm };
-      if (tipoFiltro && tipoFiltro !== "all") params.tipo = tipoFiltro;
-      if (statusFiltro && statusFiltro !== "all") params.status = statusFiltro;
+      if (tipoFiltro !== "all") params.tipo = tipoFiltro;
+      if (statusFiltro !== "all") params.status = statusFiltro;
       
       const res = await api.get("/admin/users", { params });
       setUsuarios(res.data.data.users.data || []);
@@ -286,25 +287,27 @@ const UsuariosPage = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { label: string; className: string }> = {
-      activo: { label: "Ativo", className: "bg-green-100 text-green-800" },
-      inactivo: { label: "Inativo", className: "bg-gray-100 text-gray-800" },
-      bloqueado: { label: "Bloqueado", className: "bg-red-100 text-red-800" },
-      pendente: { label: "Pendente", className: "bg-yellow-100 text-yellow-800" }
+    const config: Record<string, string> = {
+      activo: "bg-green-100 text-green-800",
+      inactivo: "bg-gray-100 text-gray-800",
+      bloqueado: "bg-red-100 text-red-800",
+      pendente: "bg-yellow-100 text-yellow-800"
     };
-    const c = config[status] || config.pendente;
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.className}`}>{c.label}</span>;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[status] || config.pendente}`}>
+      {status === 'activo' ? 'Ativo' : status === 'inactivo' ? 'Inativo' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'}
+    </span>;
   };
 
   const getTipoBadge = (tipo: string) => {
-    const config: Record<string, { label: string; className: string }> = {
-      admin: { label: "Admin", className: "bg-purple-100 text-purple-800" },
-      operador: { label: "Operador", className: "bg-blue-100 text-blue-800" },
-      voluntario: { label: "Voluntário", className: "bg-green-100 text-green-800" },
-      cidadao: { label: "Cidadão", className: "bg-gray-100 text-gray-800" }
+    const config: Record<string, string> = {
+      admin: "bg-purple-100 text-purple-800",
+      operador: "bg-blue-100 text-blue-800",
+      voluntario: "bg-green-100 text-green-800",
+      cidadao: "bg-gray-100 text-gray-800"
     };
-    const c = config[tipo] || config.cidadao;
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.className}`}>{c.label}</span>;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[tipo] || config.cidadao}`}>
+      {tipo === 'admin' ? 'Admin' : tipo === 'operador' ? 'Operador' : tipo === 'voluntario' ? 'Voluntário' : 'Cidadão'}
+    </span>;
   };
 
   if (authLoading) {
@@ -326,7 +329,7 @@ const UsuariosPage = () => {
               Usuários
               <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">Admin</span>
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Gestão de usuários do sistema - Apenas administradores</p>
+            <p className="text-sm text-muted-foreground mt-1">Gestão de usuários do sistema</p>
           </div>
           <span className="text-xs text-muted-foreground">Total: {meta?.total || 0} usuários</span>
         </div>
@@ -335,7 +338,7 @@ const UsuariosPage = () => {
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
           <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
-            <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="w-64" />
+            <Input placeholder="Buscar por nome, email ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="w-64" />
             <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Tipo" /></SelectTrigger>
               <SelectContent>
@@ -356,7 +359,7 @@ const UsuariosPage = () => {
                 <SelectItem value="bloqueado">Bloqueado</SelectItem>
               </SelectContent>
             </Select>
-            <Button type="submit" size="sm">Buscar</Button>
+            <Button type="submit">Buscar</Button>
           </form>
           
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -378,7 +381,15 @@ const UsuariosPage = () => {
                   <div><Label>Tipo *</Label><Select value={newUser.tipo} onValueChange={value => setNewUser({...newUser, tipo: value})}><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent><SelectItem value="admin">Administrador</SelectItem><SelectItem value="operador">Operador</SelectItem><SelectItem value="voluntario">Voluntário</SelectItem><SelectItem value="cidadao">Cidadão</SelectItem></SelectContent></Select>{formErrors.tipo && <p className="text-xs text-red-500">{formErrors.tipo}</p>}</div>
                   <div><Label>Status</Label><Select value={newUser.status} onValueChange={value => setNewUser({...newUser, status: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem></SelectContent></Select></div>
                 </div>
-                <div><Label>Município</Label><Select value={newUser.municipio_id || "none"} onValueChange={value => setNewUser({...newUser, municipio_id: value === "none" ? "" : value})}><SelectTrigger><SelectValue placeholder="Selecione o município" /></SelectTrigger><SelectContent className="max-h-64"><SelectItem value="none">Nenhum</SelectItem>{municipios.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nome}</SelectItem>)}</SelectContent></Select></div>
+                <div><Label>Município</Label>
+                  <Select value={newUser.municipio_id || "none"} onValueChange={value => setNewUser({...newUser, municipio_id: value === "none" ? "" : value})}>
+                    <SelectTrigger><SelectValue placeholder={loadingMunicipios ? "Carregando..." : "Selecione o município"} /></SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {municipios.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <DialogFooter><Button type="submit">Cadastrar</Button><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button></DialogFooter>
               </form>
             </DialogContent>
@@ -387,11 +398,9 @@ const UsuariosPage = () => {
         
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow><TableHead>ID</TableHead><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>Telefone</TableHead><TableHead>Tipo</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>Telefone</TableHead><TableHead>Tipo</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={7} className="text-center py-8"><div className="flex justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div><span className="ml-2">Carregando...</span></div></TableCell></TableRow>
+              {loading ? <TableRow><TableCell colSpan={7} className="text-center py-8"><div className="flex justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div></TableCell></TableRow>
               : usuarios.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-8">Nenhum usuário encontrado.</TableCell></TableRow>
               : usuarios.map(usuario => (
                 <TableRow key={usuario.id}>
@@ -402,19 +411,40 @@ const UsuariosPage = () => {
                   <TableCell>{getTipoBadge(usuario.tipo || "cidadao")}</TableCell>
                   <TableCell>{getStatusBadge(usuario.status)}</TableCell>
                   <TableCell className="text-right space-x-2">
-                    {/* Ver */}
-                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedUser(usuario)}>Ver</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader><div className="space-y-2"><div><b>ID:</b> {selectedUser?.id}</div><div><b>Nome:</b> {selectedUser?.nome} {selectedUser?.sobrenome}</div><div><b>Email:</b> {selectedUser?.email}</div><div><b>Telefone:</b> {selectedUser?.telefone || "-"}</div><div><b>Tipo:</b> {selectedUser?.tipo || "Cidadão"}</div><div><b>Status:</b> {getStatusBadge(selectedUser?.status || "pendente")}</div></div><DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedUser(usuario)}>Ver</Button></DialogTrigger>
+                      <DialogContent><DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader>
+                        <div className="space-y-2"><div><b>ID:</b> {selectedUser?.id}</div><div><b>Nome:</b> {selectedUser?.nome} {selectedUser?.sobrenome}</div><div><b>Email:</b> {selectedUser?.email}</div><div><b>Telefone:</b> {selectedUser?.telefone || "-"}</div><div><b>Tipo:</b> {selectedUser?.tipo || "Cidadão"}</div><div><b>Status:</b> {getStatusBadge(selectedUser?.status || "pendente")}</div></div>
+                        <DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                     
-                    {/* Editar */}
-                    <Dialog open={showEdit && editUser?.id === usuario.id} onOpenChange={setShowEdit}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditUser(usuario); setShowEdit(true); }}>Editar</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader><form onSubmit={handleUpdateUser} className="space-y-3"><Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" /><Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" /><Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" /><Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" /><Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="operador">Operador</SelectItem><SelectItem value="voluntario">Voluntário</SelectItem><SelectItem value="cidadao">Cidadão</SelectItem></SelectContent></Select><DialogFooter><Button type="submit">Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose></DialogFooter></form></DialogContent></Dialog>
+                    <Dialog open={showEdit && editUser?.id === usuario.id} onOpenChange={setShowEdit}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditUser(usuario); setShowEdit(true); }}>Editar</Button></DialogTrigger>
+                      <DialogContent><DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader>
+                        <form onSubmit={handleUpdateUser} className="space-y-3">
+                          <Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
+                          <Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" />
+                          <Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
+                          <Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" />
+                          <Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="operador">Operador</SelectItem><SelectItem value="voluntario">Voluntário</SelectItem><SelectItem value="cidadao">Cidadão</SelectItem></SelectContent></Select>
+                          <DialogFooter><Button type="submit">Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose></DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                     
-                    {/* Status */}
-                    <Dialog open={showApprove && selectedUser?.id === usuario.id} onOpenChange={setShowApprove}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedUser(usuario); setStatusToApprove(usuario.status); }}>Status</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader><Select value={statusToApprove} onValueChange={setStatusToApprove}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem><SelectItem value="pendente">Pendente</SelectItem></SelectContent></Select><DialogFooter><Button onClick={handleStatusChange}>Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    <Dialog open={showApprove && selectedUser?.id === usuario.id} onOpenChange={setShowApprove}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedUser(usuario); setStatusToApprove(usuario.status); }}>Status</Button></DialogTrigger>
+                      <DialogContent><DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader>
+                        <Select value={statusToApprove} onValueChange={setStatusToApprove}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem><SelectItem value="pendente">Pendente</SelectItem></SelectContent></Select>
+                        <DialogFooter><Button onClick={handleStatusChange}>Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose></DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                     
-                    {/* Penalizar */}
-                    <Dialog open={showPenalize && selectedUser?.id === usuario.id} onOpenChange={setShowPenalize}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowPenalize(true); setSelectedUser(usuario); }}>Penalizar</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Penalizar Usuário</DialogTitle></DialogHeader><Textarea placeholder="Motivo da penalização..." value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} rows={4} /><DialogFooter><Button onClick={handlePenalizeUser}>Penalizar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button></DialogClose></DialogFooter></DialogContent></Dialog>
+                    <Dialog open={showPenalize && selectedUser?.id === usuario.id} onOpenChange={setShowPenalize}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowPenalize(true); setSelectedUser(usuario); }}>Penalizar</Button></DialogTrigger>
+                      <DialogContent><DialogHeader><DialogTitle>Penalizar Usuário</DialogTitle></DialogHeader>
+                        <Textarea placeholder="Motivo da penalização..." value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} rows={4} />
+                        <DialogFooter><Button onClick={handlePenalizeUser}>Penalizar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button></DialogClose></DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                     
-                    {/* Remover */}
                     {currentUser?.id !== usuario.id && <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(usuario.id)}>Remover</Button>}
                   </TableCell>
                 </TableRow>

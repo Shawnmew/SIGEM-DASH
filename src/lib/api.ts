@@ -1,35 +1,51 @@
+// src/lib/api.ts
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
-
-// simple axios instance with auth header injection
 const api = axios.create({
-  baseURL,
+    baseURL: 'http://localhost:8001/api/v1',
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    },
+    withCredentials: false,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sigem_token');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// helpful logging when the API cannot be reached (e.g. server not running or CORS failure)
-api.interceptors.response.use(
-  (resp) => resp,
-  (err) => {
-    // err.response is undefined when network error / CORS block occurs
-    if (!err.response) {
-      console.error(
-        "[SIGEM-DASH] network error talking to API at",
-        baseURL,
-        "– make sure the SIGEM-API server is running and CORS allows",
-        "your origin (http://localhost:8080)."
-      );
+// Interceptor para adicionar token em TODAS as requisições
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        console.log('Token encontrado:', token ? 'Sim' : 'Não');
+        
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+            console.log('Token adicionado ao header:', config.headers.Authorization);
+        }
+        
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
     }
-    return Promise.reject(err);
-  }
+);
+
+// Interceptor para tratar erros 401
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        if (error.response?.status === 401) {
+            console.error('Erro 401 - Token inválido ou expirado');
+            localStorage.removeItem('token');
+            delete api.defaults.headers.common['Authorization'];
+            
+            // Redirecionar para login apenas se não estiver já na página de login
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
 );
 
 export default api;
