@@ -1,110 +1,232 @@
+// src/pages/Alertas.tsx
+import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { Bell, AlertTriangle, Info, CheckCircle } from "lucide-react";
+import api from "@/lib/api";
+import { toast } from "sonner";
+import { Bell, AlertTriangle, Info, AlertCircle, CheckCircle, Eye, Mail, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const allAlerts = [
-  { id: 1, title: "Alerta Crítico — Inundação em Luanda", description: "Nível de água subindo rapidamente. Evacuação recomendada nas zonas baixas.", severity: "critical" as const, time: "5 min atrás", read: false },
-  { id: 2, title: "Novo Incêndio Detectado — Huíla", description: "Foco de incêndio identificado por satélite na zona rural.", severity: "high" as const, time: "15 min atrás", read: false },
-  { id: 3, title: "Voluntários Disponíveis — Benguela", description: "3 novos voluntários registados e prontos para mobilização.", severity: "info" as const, time: "1h atrás", read: true },
-  { id: 4, title: "Relatório Atualizado — Cunene", description: "O relatório de impacto da seca foi atualizado com novos dados.", severity: "info" as const, time: "2h atrás", read: true },
-  { id: 5, title: "Crise Resolvida — Cabinda", description: "A tempestade tropical em Cabinda foi classificada como resolvida.", severity: "resolved" as const, time: "6h atrás", read: true },
-];
+interface Alerta {
+    id: number;
+    incidente_id: number;
+    tipo: 'critico' | 'urgente' | 'aviso' | 'informativo';
+    mensagem: string;
+    data_envio: string;
+    lido: boolean;
+    incidente?: {
+        id: number;
+        title: string;
+    };
+}
 
-const alertIcons: Record<string, typeof AlertTriangle> = {
-  critical: AlertTriangle,
-  high: AlertTriangle,
-  info: Info,
-  resolved: CheckCircle,
+const alertaIcons = {
+    critico: AlertTriangle,
+    urgente: AlertCircle,
+    aviso: AlertCircle,
+    informativo: Info,
 };
 
-const alertStyles: Record<string, string> = {
-  critical: "border-l-crisis-critical",
-  high: "border-l-crisis-high",
-  info: "border-l-info",
-  resolved: "border-l-crisis-low",
+const alertaCores = {
+    critico: "bg-red-100 text-red-800 border-red-200",
+    urgente: "bg-orange-100 text-orange-800 border-orange-200",
+    aviso: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    informativo: "bg-blue-100 text-blue-800 border-blue-200",
 };
 
 const AlertasPage = () => {
-  const { data, isLoading } = useQuery(
-    ["alertas"],
-    async () => {
-      const res = await api.get("/user/alertas");
-      return res.data;
-    }
-  );
+    const [alertas, setAlertas] = useState<Alerta[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [unreadCount, setUnreadCount] = useState(0);
 
-  const alertas: any[] = data?.data ?? [];
-  const naoLidos: number = data?.meta?.nao_lidos ?? 0;
+    useEffect(() => {
+        loadAlertas();
+    }, []);
 
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      </AppLayout>
-    );
-  }
+    const loadAlertas = async () => {
+        try {
+            const response = await api.get('/alertas');
+            const data = response.data.data || response.data || [];
+            setAlertas(data);
+            setUnreadCount(data.filter((a: Alerta) => !a.lido).length);
+        } catch (error) {
+            console.error("Erro ao carregar alertas:", error);
+            toast.error("Erro ao carregar alertas");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <AppLayout>
-      <div className="mb-6 pl-12 lg:pl-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold">Alertas</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Centro de notificações e alertas do sistema
-            </p>
-          </div>
-          <span className="bg-primary/10 text-primary text-xs font-semibold px-3 py-1.5 rounded-full">
-            {naoLidos} não lido(s)
-          </span>
-        </div>
-      </div>
+    const marcarComoLido = async (id: number) => {
+        try {
+            await api.patch(`/alertas/${id}/read`);
+            setAlertas(alertas.map(a => a.id === id ? { ...a, lido: true } : a));
+            setUnreadCount(unreadCount - 1);
+            toast.success("Alerta marcado como lido");
+        } catch (error) {
+            console.error("Erro ao marcar como lido:", error);
+            toast.error("Erro ao marcar alerta como lido");
+        }
+    };
 
-      <div className="space-y-3 max-w-3xl">
-        {alertas.map((alert: any) => {
-          // adapt server fields to frontend naming
-          const severity = alert.tipo || alert.severity || "info";
-          const Icon = alertIcons[severity];
-          const read = alert.lido;
-          const title = alert.titulo || alert.title;
-          const description = alert.descricao || alert.description;
-          const time = new Date(alert.created_at).toLocaleString();
+    const marcarTodosComoLidos = async () => {
+        try {
+            await api.patch('/alertas/read-all');
+            setAlertas(alertas.map(a => ({ ...a, lido: true })));
+            setUnreadCount(0);
+            toast.success("Todos os alertas marcados como lidos");
+        } catch (error) {
+            console.error("Erro ao marcar todos como lidos:", error);
+            toast.error("Erro ao marcar alertas como lidos");
+        }
+    };
 
-          return (
-            <div
-              key={alert.id}
-              className={`rounded-xl border border-border border-l-4 ${alertStyles[severity]} bg-card p-4 animate-slide-up ${
-                !read ? "bg-card" : "opacity-70"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <Icon
-                  className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-                    severity === "critical"
-                      ? "text-crisis-critical animate-pulse-alert"
-                      : severity === "high"
-                      ? "text-crisis-high"
-                      : severity === "resolved"
-                      ? "text-crisis-low"
-                      : "text-info"
-                  }`}
-                />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-bold">{title}</h3>
-                    {!read && <span className="w-2 h-2 rounded-full bg-primary" />}
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">{description}</p>
-                  <p className="text-[10px] text-muted-foreground">{time}</p>
+    const getTimeAgo = (date: string) => {
+        const diff = Date.now() - new Date(date).getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return "Agora";
+        if (minutes < 60) return `${minutes} min atrás`;
+        if (hours < 24) return `${hours} h atrás`;
+        return `${days} d atrás`;
+    };
+
+    if (loading) {
+        return (
+            <AppLayout>
+                <div className="flex items-center justify-center h-screen">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-              </div>
+            </AppLayout>
+        );
+    }
+
+    return (
+        <AppLayout>
+            <div className="p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-bold flex items-center gap-2">
+                            <Bell className="h-6 w-6" />
+                            Alertas
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
+                            Central de notificações e alertas do sistema
+                        </p>
+                    </div>
+                    {unreadCount > 0 && (
+                        <Button variant="outline" onClick={marcarTodosComoLidos}>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Marcar todos como lidos ({unreadCount})
+                        </Button>
+                    )}
+                </div>
+
+                <Tabs defaultValue="todos" className="space-y-4">
+                    <TabsList>
+                        <TabsTrigger value="todos">Todos ({alertas.length})</TabsTrigger>
+                        <TabsTrigger value="nao-lidos">Não lidos ({unreadCount})</TabsTrigger>
+                        <TabsTrigger value="criticos">Críticos</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="todos" className="space-y-3">
+                        {alertas.length === 0 ? (
+                            <Card>
+                                <CardContent className="py-8 text-center text-muted-foreground">
+                                    Nenhum alerta encontrado
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            alertas.map((alerta) => (
+                                <Card key={alerta.id} className={`${!alerta.lido ? 'border-l-4 border-l-red-500' : ''}`}>
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex gap-3">
+                                                {React.createElement(alertaIcons[alerta.tipo] || Info, { 
+                                                    className: `h-5 w-5 ${alerta.tipo === 'critico' ? 'text-red-500' : 'text-blue-500'}` 
+                                                })}
+                                                <div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <Badge className={alertaCores[alerta.tipo]}>
+                                                            {alerta.tipo.toUpperCase()}
+                                                        </Badge>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {getTimeAgo(alerta.data_envio)}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-1">{alerta.mensagem}</p>
+                                                    {alerta.incidente && (
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            Incidente: {alerta.incidente.title}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {!alerta.lido && (
+                                                <Button size="sm" variant="ghost" onClick={() => marcarComoLido(alerta.id)}>
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="nao-lidos" className="space-y-3">
+                        {alertas.filter(a => !a.lido).length === 0 ? (
+                            <Card><CardContent className="py-8 text-center text-muted-foreground">Não há alertas não lidos</CardContent></Card>
+                        ) : (
+                            alertas.filter(a => !a.lido).map((alerta) => (
+                                <Card key={alerta.id} className="border-l-4 border-l-red-500">
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex gap-3">
+                                                {React.createElement(alertaIcons[alerta.tipo] || Info, { className: "h-5 w-5 text-red-500" })}
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className={alertaCores[alerta.tipo]}>{alerta.tipo.toUpperCase()}</Badge>
+                                                        <span className="text-xs text-muted-foreground">{getTimeAgo(alerta.data_envio)}</span>
+                                                    </div>
+                                                    <p className="mt-1">{alerta.mensagem}</p>
+                                                </div>
+                                            </div>
+                                            <Button size="sm" variant="ghost" onClick={() => marcarComoLido(alerta.id)}><Eye className="h-4 w-4" /></Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="criticos" className="space-y-3">
+                        {alertas.filter(a => a.tipo === 'critico').length === 0 ? (
+                            <Card><CardContent className="py-8 text-center text-muted-foreground">Não há alertas críticos</CardContent></Card>
+                        ) : (
+                            alertas.filter(a => a.tipo === 'critico').map((alerta) => (
+                                <Card key={alerta.id} className="border-l-4 border-l-red-500 bg-red-50">
+                                    <CardContent className="p-4">
+                                        <div className="flex gap-3">
+                                            <AlertTriangle className="h-5 w-5 text-red-500 animate-pulse" />
+                                            <div>
+                                                <div className="flex items-center gap-2"><Badge className="bg-red-500 text-white">CRÍTICO</Badge><span className="text-xs text-muted-foreground">{getTimeAgo(alerta.data_envio)}</span></div>
+                                                <p className="mt-1 font-bold">{alerta.mensagem}</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </TabsContent>
+                </Tabs>
             </div>
-          );
-        })}
-      </div>
-    </AppLayout>
-  );
+        </AppLayout>
+    );
 };
 
 export default AlertasPage;

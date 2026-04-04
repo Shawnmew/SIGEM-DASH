@@ -10,6 +10,10 @@ import Entidades from "./pages/entidades";
 import Voluntarios from "./pages/voluntarios";
 import Reportar from "./pages/Reportar";
 import NotFound from "./pages/notfound";
+import Mapa from "./pages/Mapa";
+import Alertas from "./pages/Alertas";
+import Crises from "./pages/Crises";
+import Relatorios from "./pages/Relatorios"
 
 function App() {
   return (
@@ -49,6 +53,11 @@ function App() {
             </ProtectedRoute>
           } />
           
+          <Route path="/mapa" element={<ProtectedRoute><Mapa /></ProtectedRoute>} />
+          <Route path="/alertas" element={<ProtectedRoute><Alertas /></ProtectedRoute>} />
+          <Route path="/crises" element={<ProtectedRoute><Crises /></ProtectedRoute>} />
+          <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
