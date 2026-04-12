@@ -23,7 +23,7 @@ import { RegionOverview } from "@/components/RegionOverview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/authcontext";
 import { dashboardService, DashboardStats, ChartData } from "@/services/dashboardService";
 import { toast } from "sonner";
 
