@@ -4,8 +4,8 @@ import api from "@/lib/api";
 import { useAuth } from "@/contexts/authcontext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { MapPin, Upload, X, FileText, AlertTriangle, Loader2 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from "react-leaflet";
+import { MapPin, Upload, X, FileText, AlertTriangle, Loader2, Navigation, Crosshair, CheckCircle } from "lucide-react";
+import { MapContainer, TileLayer, Marker, useMapEvents, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -29,17 +29,18 @@ interface Categoria {
     descricao: string;
 }
 
-interface Municipio {
+interface MunicipioDetectado {
     id: number;
     nome: string;
     provincia_id: number;
+    provincia_nome?: string;
+    distancia: number;
 }
 
 interface IncidenteForm {
     title: string;
     descricao: string;
     categoria_id: string;
-    municipio_id: string;
     latitude: number | null;
     longitude: number | null;
 }
@@ -50,25 +51,68 @@ interface FileUpload {
     tipo: 'foto' | 'video' | 'audio' | 'documento';
 }
 
-function LocationMarker({ setLocation }: { setLocation: (lat: number, lng: number) => void }) {
-    const [position, setPosition] = useState<L.LatLng | null>(null);
+interface Position {
+    lat: number;
+    lng: number;
+}
+
+function calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function LocationMarker({ setLocation, userLocation, onLocationConfirmed }: { 
+    setLocation: (lat: number, lng: number) => void;
+    userLocation: Position | null;
+    onLocationConfirmed: (lat: number, lng: number) => void;
+}) {
+    const [position, setPosition] = useState<L.LatLng | null>(
+        userLocation ? L.latLng(userLocation.lat, userLocation.lng) : null
+    );
 
     useMapEvents({
         click(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            if (userLocation) {
+                const distancia = calcularDistancia(userLocation.lat, userLocation.lng, lat, lng);
+                if (distancia > 1) {
+                    toast.error(`Localização muito distante! O incidente deve estar a menos de 1km da sua localização atual. Distância: ${distancia.toFixed(2)}km`);
+                    return;
+                }
+            }
+            
             setPosition(e.latlng);
-            setLocation(e.latlng.lat, e.latlng.lng);
+            setLocation(lat, lng);
+            onLocationConfirmed(lat, lng);
             toast.success("Localização selecionada no mapa!");
         },
     });
 
     return position === null ? null : (
-        <Marker position={position}>
-            <Popup>
-                Localização selecionada<br />
-                Lat: {position.lat.toFixed(6)}<br />
-                Lng: {position.lng.toFixed(6)}
-            </Popup>
-        </Marker>
+        <>
+            <Marker position={position}>
+                <Popup>
+                    Localização selecionada<br />
+                    Lat: {position.lat.toFixed(6)}<br />
+                    Lng: {position.lng.toFixed(6)}
+                </Popup>
+            </Marker>
+            {userLocation && (
+                <Circle
+                    center={[userLocation.lat, userLocation.lng]}
+                    radius={1000}
+                    pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1 }}
+                />
+            )}
+        </>
     );
 }
 
@@ -77,13 +121,15 @@ const ReportarPage = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [loadingData, setLoadingData] = useState(true);
+    const [loadingLocation, setLoadingLocation] = useState(true);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
-    const [municipios, setMunicipios] = useState<Municipio[]>([]);
+    const [municipioDetectado, setMunicipioDetectado] = useState<MunicipioDetectado | null>(null);
+    const [userLocation, setUserLocation] = useState<Position | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
     const [formData, setFormData] = useState<IncidenteForm>({
         title: "",
         descricao: "",
         categoria_id: "",
-        municipio_id: "",
         latitude: null,
         longitude: null
     });
@@ -93,20 +139,15 @@ const ReportarPage = () => {
 
     useEffect(() => {
         loadInitialData();
+        getCurrentLocation();
     }, []);
 
     const loadInitialData = async () => {
         setLoadingData(true);
         try {
             const categoriasRes = await api.get('/categorias');
-            const municipiosRes = await api.get('/municipios');
-            
             const categoriasData = categoriasRes.data.data || categoriasRes.data || [];
-            const municipiosData = municipiosRes.data.data || municipiosRes.data || [];
-            
             setCategorias(categoriasData);
-            setMunicipios(municipiosData);
-            
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
             toast.error("Erro ao carregar dados necessários");
@@ -115,35 +156,105 @@ const ReportarPage = () => {
         }
     };
 
+    const detectarMunicipioPorLocalizacao = async (lat: number, lng: number) => {
+        try {
+            const response = await api.get('/municipios/detect', {
+                params: { latitude: lat, longitude: lng }
+            });
+            
+            if (response.data.success && response.data.data) {
+                const municipio = response.data.data;
+                setMunicipioDetectado(municipio);
+                toast.success(`Município detectado: ${municipio.nome}${municipio.distancia ? ` (${municipio.distancia.toFixed(2)}km do centro)` : ''}`);
+                return municipio;
+            } else {
+                setMunicipioDetectado(null);
+                toast.error("Não foi possível detectar o município. Verifique se está dentro de Angola.");
+                return null;
+            }
+        } catch (error) {
+            console.error("Erro ao detectar município:", error);
+            setMunicipioDetectado(null);
+            toast.error("Erro ao detectar município. Tente novamente.");
+            return null;
+        }
+    };
+
     const getCurrentLocation = () => {
+        setLoadingLocation(true);
+        setLocationError(null);
+        
         if (!navigator.geolocation) {
-            toast.error("Geolocalização não suportada pelo navegador");
+            setLocationError("Geolocalização não é suportada pelo seu navegador");
+            setLoadingLocation(false);
+            toast.error("Geolocalização não suportada");
             return;
         }
 
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setFormData({
-                    ...formData,
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude
-                });
-                setMapCenter([position.coords.latitude, position.coords.longitude]);
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                setUserLocation({ lat, lng });
+                setMapCenter([lat, lng]);
+                setFormData(prev => ({
+                    ...prev,
+                    latitude: lat,
+                    longitude: lng
+                }));
+                
+                // Detectar município automaticamente
+                await detectarMunicipioPorLocalizacao(lat, lng);
+                
+                setLoadingLocation(false);
                 toast.success("Localização capturada com sucesso!");
             },
             (error) => {
                 console.error("Erro ao obter localização:", error);
-                toast.error("Erro ao obter localização. Verifique as permissões.");
+                let errorMessage = "Erro ao obter localização. ";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage += "Permissão negada. Por favor, permita o acesso à localização.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage += "Informação de localização indisponível.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage += "Tempo limite excedido.";
+                        break;
+                    default:
+                        errorMessage += "Tente novamente.";
+                }
+                setLocationError(errorMessage);
+                setLoadingLocation(false);
+                toast.error(errorMessage);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
             }
         );
     };
 
-    const updateLocation = (lat: number, lng: number) => {
-        setFormData({
-            ...formData,
+    const updateLocation = async (lat: number, lng: number) => {
+        if (userLocation) {
+            const distancia = calcularDistancia(userLocation.lat, userLocation.lng, lat, lng);
+            if (distancia > 1) {
+                toast.error(`Localização muito distante! O incidente deve estar a menos de 1km da sua localização atual. Distância: ${distancia.toFixed(2)}km`);
+                return false;
+            }
+        }
+        
+        setFormData(prev => ({
+            ...prev,
             latitude: lat,
             longitude: lng
-        });
+        }));
+        
+        // Detectar município automaticamente quando selecionar no mapa
+        await detectarMunicipioPorLocalizacao(lat, lng);
+        return true;
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,8 +292,14 @@ const ReportarPage = () => {
         if (!formData.categoria_id) {
             newErrors.categoria_id = "Selecione uma categoria";
         }
-        if (!formData.municipio_id) {
-            newErrors.municipio_id = "Selecione o município";
+        if (!formData.latitude || !formData.longitude) {
+            newErrors.location = "Selecione a localização no mapa";
+        }
+        if (!userLocation) {
+            newErrors.gps = "Permita o acesso à localização para reportar um incidente";
+        }
+        if (!municipioDetectado) {
+            newErrors.municipio = "Não foi possível detectar o município. Verifique sua localização.";
         }
         
         setErrors(newErrors);
@@ -197,6 +314,24 @@ const ReportarPage = () => {
             return;
         }
 
+        if (userLocation && formData.latitude && formData.longitude) {
+            const distancia = calcularDistancia(
+                userLocation.lat, 
+                userLocation.lng, 
+                formData.latitude, 
+                formData.longitude
+            );
+            if (distancia > 1) {
+                toast.error(`Localização inválida! O incidente está a ${distancia.toFixed(2)}km da sua localização atual. O limite é 1km.`);
+                return;
+            }
+        }
+
+        if (!municipioDetectado) {
+            toast.error("Município não detectado. Selecione uma localização válida dentro de Angola.");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -204,9 +339,9 @@ const ReportarPage = () => {
                 title: formData.title,
                 descricao: formData.descricao,
                 categoria_id: parseInt(formData.categoria_id),
-                municipio_id: parseInt(formData.municipio_id),
-                latitude: formData.latitude ? formData.latitude.toString() : null,
-                longitude: formData.longitude ? formData.longitude.toString() : null,
+                municipio_id: municipioDetectado.id,
+                latitude: formData.latitude?.toString(),
+                longitude: formData.longitude?.toString(),
                 status: "pendente"
             };
 
@@ -270,256 +405,270 @@ const ReportarPage = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <Card>
+                    <Card className={!userLocation ? "border-red-500" : ""}>
                         <CardHeader>
-                            <CardTitle>Informações do Incidente</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <Navigation className="h-5 w-5 text-primary" />
+                                Localização Obrigatória
+                            </CardTitle>
                             <CardDescription>
-                                Descreva detalhadamente o incidente que está ocorrendo
+                                Para reportar um incidente, você precisa permitir o acesso à sua localização.
+                                O incidente deve estar a menos de 1km da sua localização atual.
+                                O município será detectado automaticamente.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <Label htmlFor="title">Título *</Label>
-                                <Input
-                                    id="title"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                    placeholder="Ex: Inundação no bairro X"
-                                    className={errors.title ? "border-red-500" : ""}
-                                />
-                                {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
-                            </div>
-
-                            <div>
-                                <Label htmlFor="descricao">Descrição *</Label>
-                                <Textarea
-                                    id="descricao"
-                                    value={formData.descricao}
-                                    onChange={(e) => setFormData({...formData, descricao: e.target.value})}
-                                    placeholder="Descreva detalhadamente o incidente..."
-                                    rows={5}
-                                    className={errors.descricao ? "border-red-500" : ""}
-                                />
-                                {errors.descricao && <p className="text-xs text-red-500 mt-1">{errors.descricao}</p>}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="categoria">Categoria *</Label>
-                                    <Select
-                                        value={formData.categoria_id}
-                                        onValueChange={(value) => setFormData({...formData, categoria_id: value})}
-                                    >
-                                        <SelectTrigger className={errors.categoria_id ? "border-red-500" : ""}>
-                                            <SelectValue placeholder="Selecione a categoria" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {categorias.length === 0 ? (
-                                                <SelectItem value="none" disabled>Nenhuma categoria encontrada</SelectItem>
-                                            ) : (
-                                                categorias.map((cat) => (
-                                                    <SelectItem key={cat.id} value={String(cat.id)}>
-                                                        {cat.nome}
-                                                    </SelectItem>
-                                                ))
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.categoria_id && <p className="text-xs text-red-500 mt-1">{errors.categoria_id}</p>}
+                        <CardContent>
+                            {loadingLocation ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                                    <span>Obtendo sua localização...</span>
                                 </div>
-
-                                <div>
-                                    <Label htmlFor="municipio">Município *</Label>
-                                    <Select
-                                        value={formData.municipio_id}
-                                        onValueChange={(value) => setFormData({...formData, municipio_id: value})}
-                                    >
-                                        <SelectTrigger className={errors.municipio_id ? "border-red-500" : ""}>
-                                            <SelectValue placeholder="Selecione o município" />
-                                        </SelectTrigger>
-                                        <SelectContent className="max-h-64">
-                                            {municipios.length === 0 ? (
-                                                <SelectItem value="none" disabled>Nenhum município encontrado</SelectItem>
-                                            ) : (
-                                                municipios.map((m) => (
-                                                    <SelectItem key={m.id} value={String(m.id)}>
-                                                        {m.nome}
-                                                    </SelectItem>
-                                                ))
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.municipio_id && <p className="text-xs text-red-500 mt-1">{errors.municipio_id}</p>}
+                            ) : locationError ? (
+                                <div className="text-center py-8">
+                                    <div className="text-red-500 mb-4">{locationError}</div>
+                                    <Button type="button" onClick={getCurrentLocation} variant="outline">
+                                        <Crosshair className="h-4 w-4 mr-2" />
+                                        Tentar Novamente
+                                    </Button>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Localização</CardTitle>
-                            <CardDescription>
-                                Selecione a localização no mapa ou use sua localização atual
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="h-96 rounded-lg overflow-hidden border">
-                                <MapContainer
-                                    center={mapCenter}
-                                    zoom={6}
-                                    style={{ height: "100%", width: "100%" }}
-                                    scrollWheelZoom={true}
-                                >
-                                    <TileLayer
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    />
-                                    <LocationMarker setLocation={updateLocation} />
-                                    {formData.latitude && formData.longitude && (
-                                        <Marker position={[formData.latitude, formData.longitude]}>
-                                            <Popup>
-                                                Localização do incidente<br />
-                                                Lat: {formData.latitude.toFixed(6)}<br />
-                                                Lng: {formData.longitude.toFixed(6)}
-                                            </Popup>
-                                        </Marker>
-                                    )}
-                                </MapContainer>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="latitude">Latitude</Label>
-                                    <Input
-                                        id="latitude"
-                                        value={formData.latitude || ""}
-                                        onChange={(e) => setFormData({...formData, latitude: parseFloat(e.target.value) || null})}
-                                        placeholder="-8.8383"
-                                        type="number"
-                                        step="any"
-                                    />
-                                </div>
-                                <div>
-                                    <Label htmlFor="longitude">Longitude</Label>
-                                    <Input
-                                        id="longitude"
-                                        value={formData.longitude || ""}
-                                        onChange={(e) => setFormData({...formData, longitude: parseFloat(e.target.value) || null})}
-                                        placeholder="13.2344"
-                                        type="number"
-                                        step="any"
-                                    />
-                                </div>
-                            </div>
-                            
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={getCurrentLocation}
-                                className="w-full"
-                            >
-                                <MapPin className="h-4 w-4 mr-2" />
-                                Usar minha localização atual
-                            </Button>
-                            
-                            <p className="text-xs text-muted-foreground text-center">
-                                Clique no mapa para selecionar a localização do incidente
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Mídia</CardTitle>
-                            <CardDescription>
-                                Adicione fotos, vídeos ou documentos relacionados ao incidente
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                                <input
-                                    type="file"
-                                    id="file-upload"
-                                    multiple
-                                    accept="image/*,video/*,audio/*,application/pdf"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
-                                <Label
-                                    htmlFor="file-upload"
-                                    className="cursor-pointer flex flex-col items-center gap-2"
-                                >
-                                    <Upload className="h-8 w-8 text-gray-400" />
-                                    <span className="text-sm text-gray-600">
-                                        Clique para selecionar arquivos
-                                    </span>
-                                    <span className="text-xs text-gray-400">
-                                        ou arraste e solte aqui
-                                    </span>
-                                </Label>
-                            </div>
-
-                            {files.length > 0 && (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {files.map((file, index) => (
-                                        <div key={index} className="relative group">
-                                            {file.tipo === 'foto' && (
-                                                <img
-                                                    src={file.preview}
-                                                    alt="Preview"
-                                                    className="w-full h-24 object-cover rounded-lg"
-                                                />
-                                            )}
-                                            {file.tipo === 'video' && (
-                                                <div className="w-full h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                                                    <FileText className="h-8 w-8 text-gray-500" />
-                                                </div>
-                                            )}
-                                            {file.tipo === 'audio' && (
-                                                <div className="w-full h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                                                    <FileText className="h-8 w-8 text-gray-500" />
-                                                </div>
-                                            )}
-                                            {file.tipo === 'documento' && (
-                                                <div className="w-full h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                                                    <FileText className="h-8 w-8 text-gray-500" />
-                                                </div>
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={() => removeFile(index)}
-                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                            <p className="text-xs text-muted-foreground truncate mt-1">
-                                                {file.file.name}
-                                            </p>
+                            ) : userLocation ? (
+                                <div className="space-y-4">
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle className="h-4 w-4" />
+                                            <span>Localização capturada com sucesso!</span>
                                         </div>
-                                    ))}
+                                        <p className="text-xs mt-1">
+                                            Lat: {userLocation.lat.toFixed(6)} | Lng: {userLocation.lng.toFixed(6)}
+                                        </p>
+                                    </div>
+
+                                    {municipioDetectado && (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="h-4 w-4" />
+                                                <span>Município Detectado: <strong>{municipioDetectado.nome}</strong></span>
+                                            </div>
+                                            {municipioDetectado.provincia_nome && (
+                                                <p className="text-xs mt-1">Província: {municipioDetectado.provincia_nome}</p>
+                                            )}
+                                            {municipioDetectado.distancia && (
+                                                <p className="text-xs">Distância do centro: {municipioDetectado.distancia.toFixed(2)}km</p>
+                                            )}
+                                        </div>
+                                    )}
+                                    
+                                    <div className="h-96 rounded-lg overflow-hidden border">
+                                        <MapContainer
+                                            center={mapCenter}
+                                            zoom={13}
+                                            style={{ height: "100%", width: "100%" }}
+                                            scrollWheelZoom={true}
+                                        >
+                                            <TileLayer
+                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            />
+                                            <LocationMarker 
+                                                setLocation={updateLocation} 
+                                                userLocation={userLocation}
+                                                onLocationConfirmed={() => {}}
+                                            />
+                                            {formData.latitude && formData.longitude && (
+                                                <Marker position={[formData.latitude, formData.longitude]}>
+                                                    <Popup>
+                                                        Localização do incidente<br />
+                                                        Lat: {formData.latitude.toFixed(6)}<br />
+                                                        Lng: {formData.longitude.toFixed(6)}
+                                                        {municipioDetectado && <br />}
+                                                        {municipioDetectado && `Município: ${municipioDetectado.nome}`}
+                                                    </Popup>
+                                                </Marker>
+                                            )}
+                                            <Circle
+                                                center={[userLocation.lat, userLocation.lng]}
+                                                radius={1000}
+                                                pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1 }}
+                                            />
+                                        </MapContainer>
+                                    </div>
+                                    
+                                    <p className="text-xs text-muted-foreground text-center">
+                                        O círculo vermelho mostra o raio de 1km permitido. Clique no mapa dentro do círculo para selecionar a localização do incidente. O município será detectado automaticamente.
+                                    </p>
+                                    
+                                    {errors.location && (
+                                        <p className="text-xs text-red-500 text-center">{errors.location}</p>
+                                    )}
+                                    {errors.municipio && (
+                                        <p className="text-xs text-red-500 text-center">{errors.municipio}</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Button type="button" onClick={getCurrentLocation} variant="default">
+                                        <Crosshair className="h-4 w-4 mr-2" />
+                                        Permitir Localização
+                                    </Button>
                                 </div>
                             )}
                         </CardContent>
-                        <CardFooter className="flex justify-end gap-3">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => navigate("/crises")}
-                            >
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={loading}>
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Enviando...
-                                    </>
-                                ) : (
-                                    "Reportar Incidente"
-                                )}
-                            </Button>
-                        </CardFooter>
                     </Card>
+
+                    {userLocation && (
+                        <>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Informações do Incidente</CardTitle>
+                                    <CardDescription>
+                                        Descreva detalhadamente o incidente que está ocorrendo
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="title">Título *</Label>
+                                        <Input
+                                            id="title"
+                                            value={formData.title}
+                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                            placeholder="Ex: Inundação no bairro X"
+                                            className={errors.title ? "border-red-500" : ""}
+                                        />
+                                        {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="descricao">Descrição *</Label>
+                                        <Textarea
+                                            id="descricao"
+                                            value={formData.descricao}
+                                            onChange={(e) => setFormData({...formData, descricao: e.target.value})}
+                                            placeholder="Descreva detalhadamente o incidente..."
+                                            rows={5}
+                                            className={errors.descricao ? "border-red-500" : ""}
+                                        />
+                                        {errors.descricao && <p className="text-xs text-red-500 mt-1">{errors.descricao}</p>}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="categoria">Categoria *</Label>
+                                        <Select
+                                            value={formData.categoria_id}
+                                            onValueChange={(value) => setFormData({...formData, categoria_id: value})}
+                                        >
+                                            <SelectTrigger className={errors.categoria_id ? "border-red-500" : ""}>
+                                                <SelectValue placeholder="Selecione a categoria" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {categorias.map((cat) => (
+                                                    <SelectItem key={cat.id} value={String(cat.id)}>
+                                                        {cat.nome}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.categoria_id && <p className="text-xs text-red-500 mt-1">{errors.categoria_id}</p>}
+                                    </div>
+
+                                    {/* Município detectado - apenas exibição, sem edição */}
+                                    <div className="bg-gray-50 rounded-lg p-3 border">
+                                        <Label className="text-muted-foreground">Município (Detectado Automaticamente)</Label>
+                                        <p className="font-medium mt-1">
+                                            {municipioDetectado ? municipioDetectado.nome : "Aguardando localização..."}
+                                        </p>
+                                        {municipioDetectado?.provincia_nome && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Província: {municipioDetectado.provincia_nome}
+                                            </p>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Mídia</CardTitle>
+                                    <CardDescription>
+                                        Adicione fotos, vídeos ou documentos relacionados ao incidente
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
+                                        <input
+                                            type="file"
+                                            id="file-upload"
+                                            multiple
+                                            accept="image/*,video/*,audio/*,application/pdf"
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                        />
+                                        <Label
+                                            htmlFor="file-upload"
+                                            className="cursor-pointer flex flex-col items-center gap-2"
+                                        >
+                                            <Upload className="h-8 w-8 text-gray-400" />
+                                            <span className="text-sm text-gray-600">
+                                                Clique para selecionar arquivos
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                                ou arraste e solte aqui
+                                            </span>
+                                        </Label>
+                                    </div>
+
+                                    {files.length > 0 && (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            {files.map((file, index) => (
+                                                <div key={index} className="relative group">
+                                                    {file.tipo === 'foto' && (
+                                                        <img
+                                                            src={file.preview}
+                                                            alt="Preview"
+                                                            className="w-full h-24 object-cover rounded-lg"
+                                                        />
+                                                    )}
+                                                    {(file.tipo === 'video' || file.tipo === 'audio' || file.tipo === 'documento') && (
+                                                        <div className="w-full h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                                                            <FileText className="h-8 w-8 text-gray-500" />
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFile(index)}
+                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                    <p className="text-xs text-muted-foreground truncate mt-1">
+                                                        {file.file.name}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                                <CardFooter className="flex justify-end gap-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => navigate("/crises")}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button type="submit" disabled={loading || !userLocation || !municipioDetectado}>
+                                        {loading ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                Enviando...
+                                            </>
+                                        ) : (
+                                            "Reportar Incidente"
+                                        )}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </>
+                    )}
                 </form>
             </div>
         </AppLayout>

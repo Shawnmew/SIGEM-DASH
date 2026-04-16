@@ -17,18 +17,23 @@ import {
   Loader2,
   Phone,
   Mail,
-  Navigation
+  Navigation,
+  X,
+  Play,
+  Download,
+  ZoomIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix para os ícones do Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -136,6 +141,8 @@ const CriseDetalhesPage = () => {
     const [incidente, setIncidente] = useState<Incidente | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("detalhes");
+    const [selectedMedia, setSelectedMedia] = useState<Midia | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         loadIncidente();
@@ -180,6 +187,16 @@ const CriseDetalhesPage = () => {
         return `${days} dia(s) atrás`;
     };
 
+    const openMediaModal = (midia: Midia) => {
+        setSelectedMedia(midia);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setSelectedMedia(null);
+    };
+
     if (loading) {
         return (
             <AppLayout>
@@ -211,7 +228,6 @@ const CriseDetalhesPage = () => {
     return (
         <AppLayout>
             <div className="p-4 lg:p-6">
-                {/* Header */}
                 <div className="mb-6">
                     <Button 
                         variant="ghost" 
@@ -243,7 +259,6 @@ const CriseDetalhesPage = () => {
                     </div>
                 </div>
 
-                {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                     <TabsList>
                         <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
@@ -252,10 +267,8 @@ const CriseDetalhesPage = () => {
                         <TabsTrigger value="mapa">Mapa</TabsTrigger>
                     </TabsList>
 
-                    {/* Tab: Detalhes */}
                     <TabsContent value="detalhes" className="space-y-4">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* Descrição */}
                             <div className="lg:col-span-2">
                                 <Card>
                                     <CardHeader>
@@ -269,7 +282,6 @@ const CriseDetalhesPage = () => {
                                 </Card>
                             </div>
 
-                            {/* Informações */}
                             <div className="space-y-4">
                                 <Card>
                                     <CardHeader>
@@ -346,46 +358,59 @@ const CriseDetalhesPage = () => {
                         </div>
                     </TabsContent>
 
-                    {/* Tab: Mídias */}
                     <TabsContent value="midias">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Mídias do Incidente</CardTitle>
+                                <p className="text-sm text-muted-foreground">
+                                    Clique nas imagens para ampliar
+                                </p>
                             </CardHeader>
                             <CardContent>
                                 {incidente.midias && incidente.midias.length > 0 ? (
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                         {incidente.midias.map((midia) => (
-                                            <div key={midia.id} className="relative group">
+                                            <div 
+                                                key={midia.id} 
+                                                className="relative group cursor-pointer"
+                                                onClick={() => openMediaModal(midia)}
+                                            >
                                                 {midia.tipo_midia === 'foto' && (
-                                                    <img
-                                                        src={midia.url}
-                                                        alt="Mídia do incidente"
-                                                        className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                                        onClick={() => window.open(midia.url, '_blank')}
-                                                    />
+                                                    <div className="relative overflow-hidden rounded-lg bg-gray-100 aspect-square">
+                                                        <img
+                                                            src={midia.url}
+                                                            alt="Mídia do incidente"
+                                                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLImageElement).src = "https://placehold.co/400x400?text=Erro+ao+carregar+imagem";
+                                                            }}
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <ZoomIn className="h-8 w-8 text-white" />
+                                                        </div>
+                                                    </div>
                                                 )}
                                                 {midia.tipo_midia === 'video' && (
-                                                    <div 
-                                                        className="w-full h-32 bg-gray-100 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                                                        onClick={() => window.open(midia.url, '_blank')}
-                                                    >
-                                                        <Video className="h-8 w-8 text-gray-500" />
+                                                    <div className="relative overflow-hidden rounded-lg bg-gray-100 aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                                                        <Video className="h-12 w-12 text-gray-500" />
                                                         <span className="text-xs text-muted-foreground mt-2">Vídeo</span>
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <Play className="h-8 w-8 text-white" />
+                                                        </div>
                                                     </div>
                                                 )}
                                                 {midia.tipo_midia === 'documento' && (
-                                                    <div 
-                                                        className="w-full h-32 bg-gray-100 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                                                        onClick={() => window.open(midia.url, '_blank')}
-                                                    >
-                                                        <FileText className="h-8 w-8 text-gray-500" />
+                                                    <div className="relative overflow-hidden rounded-lg bg-gray-100 aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                                                        <FileText className="h-12 w-12 text-gray-500" />
                                                         <span className="text-xs text-muted-foreground mt-2">Documento</span>
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <Download className="h-8 w-8 text-white" />
+                                                        </div>
                                                     </div>
                                                 )}
                                                 <div className="absolute top-2 right-2">
                                                     <Badge variant="secondary" className="text-xs">
-                                                        {midia.tipo_midia}
+                                                        {midia.tipo_midia === 'foto' ? 'Foto' : midia.tipo_midia === 'video' ? 'Vídeo' : 'Documento'}
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -401,7 +426,6 @@ const CriseDetalhesPage = () => {
                         </Card>
                     </TabsContent>
 
-                    {/* Tab: Voluntários */}
                     <TabsContent value="voluntarios">
                         <Card>
                             <CardHeader>
@@ -457,7 +481,6 @@ const CriseDetalhesPage = () => {
                         </Card>
                     </TabsContent>
 
-                    {/* Tab: Mapa */}
                     <TabsContent value="mapa">
                         <Card>
                             <CardHeader>
@@ -500,6 +523,58 @@ const CriseDetalhesPage = () => {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {/* Modal para visualização de mídia - CORRIGIDO COM DialogTitle */}
+            <Dialog open={isModalOpen} onOpenChange={closeModal}>
+                <DialogContent className="max-w-4xl max-h-[90vh] p-0 bg-black/95">
+                    <VisuallyHidden asChild>
+                        <DialogTitle>Visualização de Mídia</DialogTitle>
+                    </VisuallyHidden>
+                    <DialogClose className="absolute right-4 top-4 z-50 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition-colors">
+                        <X className="h-5 w-5" />
+                    </DialogClose>
+                    {selectedMedia && (
+                        <div className="flex items-center justify-center w-full h-full min-h-[60vh]">
+                            {selectedMedia.tipo_midia === 'foto' && (
+                                <img
+                                    src={selectedMedia.url}
+                                    alt="Mídia do incidente"
+                                    className="max-w-full max-h-[85vh] object-contain"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = "https://placehold.co/800x600?text=Erro+ao+carregar+imagem";
+                                    }}
+                                />
+                            )}
+                            {selectedMedia.tipo_midia === 'video' && (
+                                <video
+                                    src={selectedMedia.url}
+                                    controls
+                                    autoPlay
+                                    className="max-w-full max-h-[85vh]"
+                                >
+                                    Seu navegador não suporta vídeos.
+                                </video>
+                            )}
+                            {selectedMedia.tipo_midia === 'documento' && (
+                                <div className="text-center p-8">
+                                    <FileText className="h-20 w-20 text-white mx-auto mb-4" />
+                                    <p className="text-white mb-4">Visualização não disponível para este tipo de arquivo</p>
+                                    <a
+                                        href={selectedMedia.url}
+                                        download
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Baixar Documento
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 };
