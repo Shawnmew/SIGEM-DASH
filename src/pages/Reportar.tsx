@@ -1,5 +1,3 @@
-// src/pages/Reportar.tsx
-
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
@@ -18,7 +16,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Fix para os ícones do Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -53,7 +50,6 @@ interface FileUpload {
     tipo: 'foto' | 'video' | 'audio' | 'documento';
 }
 
-// Componente para capturar clique no mapa
 function LocationMarker({ setLocation }: { setLocation: (lat: number, lng: number) => void }) {
     const [position, setPosition] = useState<L.LatLng | null>(null);
 
@@ -95,7 +91,6 @@ const ReportarPage = () => {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [mapCenter, setMapCenter] = useState<[number, number]>([-12.3, 17.5]);
 
-    // Carregar dados iniciais
     useEffect(() => {
         loadInitialData();
     }, []);
@@ -103,27 +98,14 @@ const ReportarPage = () => {
     const loadInitialData = async () => {
         setLoadingData(true);
         try {
-            console.log("Carregando categorias...");
             const categoriasRes = await api.get('/categorias');
-            console.log("Resposta categorias:", categoriasRes.data);
-            
-            console.log("Carregando municipios...");
             const municipiosRes = await api.get('/municipios');
-            console.log("Resposta municipios:", municipiosRes.data);
             
-            // Extrair dados corretamente
             const categoriasData = categoriasRes.data.data || categoriasRes.data || [];
             const municipiosData = municipiosRes.data.data || municipiosRes.data || [];
             
             setCategorias(categoriasData);
             setMunicipios(municipiosData);
-            
-            console.log("Categorias carregadas:", categoriasData.length);
-            console.log("Municipios carregados:", municipiosData.length);
-            
-            if (categoriasData.length === 0) {
-                toast.warning("Nenhuma categoria encontrada. Contate o administrador.");
-            }
             
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
@@ -133,7 +115,6 @@ const ReportarPage = () => {
         }
     };
 
-    // Capturar localização via GPS
     const getCurrentLocation = () => {
         if (!navigator.geolocation) {
             toast.error("Geolocalização não suportada pelo navegador");
@@ -157,7 +138,6 @@ const ReportarPage = () => {
         );
     };
 
-    // Atualizar localização manualmente
     const updateLocation = (lat: number, lng: number) => {
         setFormData({
             ...formData,
@@ -166,7 +146,6 @@ const ReportarPage = () => {
         });
     };
 
-    // Manipular arquivos
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
         const newFiles: FileUpload[] = selectedFiles.map(file => ({
@@ -190,7 +169,6 @@ const ReportarPage = () => {
         setFiles(files.filter((_, i) => i !== index));
     };
 
-    // Validar formulário
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
         
@@ -211,7 +189,6 @@ const ReportarPage = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    // Enviar formulário
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -241,12 +218,14 @@ const ReportarPage = () => {
                 if (files.length > 0) {
                     for (const fileUpload of files) {
                         const formDataFile = new FormData();
-                        formDataFile.append('incidente_id', incidenteId);
+                        formDataFile.append('incidente_id', incidenteId.toString());
                         formDataFile.append('tipo_midia', fileUpload.tipo);
                         formDataFile.append('arquivo', fileUpload.file);
                         
                         await api.post("/midia-incidentes", formDataFile, {
-                            headers: { 'Content-Type': 'multipart/form-data' }
+                            headers: {
+                                'Content-Type': 'multipart/form-data',
+                            }
                         });
                     }
                 }
@@ -256,7 +235,12 @@ const ReportarPage = () => {
             }
         } catch (error: any) {
             console.error("Erro ao reportar incidente:", error);
-            toast.error(error.response?.data?.message || "Erro ao reportar incidente");
+            
+            if (error.response?.data?.message) {
+                toast.error(error.response.data.message);
+            } else {
+                toast.error("Erro ao reportar incidente");
+            }
         } finally {
             setLoading(false);
         }
@@ -275,7 +259,6 @@ const ReportarPage = () => {
     return (
         <AppLayout>
             <div className="max-w-4xl mx-auto p-4 lg:p-6">
-                {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         <AlertTriangle className="h-6 w-6 text-red-500" />
@@ -287,7 +270,6 @@ const ReportarPage = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Informações Básicas */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Informações do Incidente</CardTitle>
@@ -373,7 +355,6 @@ const ReportarPage = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Localização com Mapa */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Localização</CardTitle>
@@ -447,7 +428,6 @@ const ReportarPage = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Mídia */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Mídia</CardTitle>

@@ -1,4 +1,3 @@
-// src/App.tsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/authcontext";
 import { ProtectedRoute } from "@/components/protectedroute";
@@ -13,7 +12,8 @@ import NotFound from "./pages/notfound";
 import Mapa from "./pages/Mapa";
 import Alertas from "./pages/Alertas";
 import Crises from "./pages/Crises";
-import Relatorios from "./pages/Relatorios"
+import Relatorios from "./pages/Relatorios";
+import CriseDetalhes from "./pages/CriseDetalhes";
 
 function App() {
   return (
@@ -56,6 +56,7 @@ function App() {
           <Route path="/mapa" element={<ProtectedRoute><Mapa /></ProtectedRoute>} />
           <Route path="/alertas" element={<ProtectedRoute><Alertas /></ProtectedRoute>} />
           <Route path="/crises" element={<ProtectedRoute><Crises /></ProtectedRoute>} />
+          <Route path="/crises/:id" element={<ProtectedRoute><CriseDetalhes /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />

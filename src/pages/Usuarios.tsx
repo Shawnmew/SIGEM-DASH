@@ -120,15 +120,37 @@ const UsuariosPage = () => {
       if (statusFiltro !== "all") params.status = statusFiltro;
       
       const res = await api.get("/admin/users", { params });
-      setUsuarios(res.data.data.users.data || []);
-      setMeta({
-        current_page: res.data.data.users.current_page,
-        last_page: res.data.data.users.last_page,
-        per_page: res.data.data.users.per_page,
-        total: res.data.data.users.total,
-        from: res.data.data.users.from,
-        to: res.data.data.users.to,
-      });
+      
+      // CORREÇÃO: Acessar os dados corretamente independente da estrutura
+      let usersArray = [];
+      let metaData = null;
+      
+      if (res.data.data?.users?.data) {
+        usersArray = res.data.data.users.data;
+        metaData = {
+          current_page: res.data.data.users.current_page,
+          last_page: res.data.data.users.last_page,
+          per_page: res.data.data.users.per_page,
+          total: res.data.data.users.total,
+          from: res.data.data.users.from,
+          to: res.data.data.users.to,
+        };
+      } else if (res.data.data?.users && Array.isArray(res.data.data.users)) {
+        usersArray = res.data.data.users;
+        metaData = res.data.meta;
+      } else if (res.data.users && Array.isArray(res.data.users)) {
+        usersArray = res.data.users;
+        metaData = res.data.meta;
+      } else if (res.data.data && Array.isArray(res.data.data)) {
+        usersArray = res.data.data;
+        metaData = res.data.meta;
+      } else {
+        usersArray = [];
+        metaData = null;
+      }
+      
+      setUsuarios(usersArray);
+      setMeta(metaData);
     } catch (e) {
       console.error("Erro ao carregar usuários:", e);
       setUsuarios([]);

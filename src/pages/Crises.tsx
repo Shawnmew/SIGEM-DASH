@@ -1,4 +1,3 @@
-// src/pages/Crises.tsx
 import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
