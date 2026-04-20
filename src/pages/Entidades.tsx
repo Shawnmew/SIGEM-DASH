@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
-import { useAuth } from "@/contexts/authcontext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
@@ -12,7 +12,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Filter, RefreshCw } from "lucide-react";
+import { Filter } from "lucide-react";
 
 interface Entidade {
   id: number;
@@ -121,7 +121,6 @@ const EntidadesPage = () => {
     }
   };
 
-  // Filtrar municípios por província selecionada
   useEffect(() => {
     if (provinciaId && provinciaId !== "all") {
       const filtered = municipios.filter(m => m.provincia_id === parseInt(provinciaId));
@@ -270,10 +269,10 @@ const EntidadesPage = () => {
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, string> = { 
-      activo: "bg-green-100 text-green-800", 
-      inactivo: "bg-gray-100 text-gray-800", 
-      bloqueado: "bg-red-100 text-red-800", 
-      pendente: "bg-yellow-100 text-yellow-800" 
+      activo: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400", 
+      inactivo: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400", 
+      bloqueado: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400", 
+      pendente: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400" 
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[status] || config.pendente}`}>
       {status === 'activo' ? 'Ativo' : status === 'inactivo' ? 'Inativo' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'}
@@ -295,7 +294,7 @@ const EntidadesPage = () => {
       <div className="mb-6 pl-12 lg:pl-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold">Entidades Promotoras</h1>
+            <h1 className="text-2xl font-extrabold dark:text-white">Entidades Promotoras</h1>
             <p className="text-sm text-muted-foreground mt-1">Gestão de entidades promotoras e serviços de emergência</p>
           </div>
           {hasActiveFilters && (
@@ -306,7 +305,7 @@ const EntidadesPage = () => {
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-card rounded-lg shadow p-4">
         <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
           <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
             <Input 

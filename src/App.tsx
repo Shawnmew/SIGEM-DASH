@@ -1,14 +1,16 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/authcontext";
-import { ProtectedRoute } from "@/components/protectedroute";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Toaster } from "sonner";
-import Index from "./pages/index";
-import Login from "./pages/login";
-import Usuarios from "./pages/usuarios";
-import Entidades from "./pages/entidades";
-import Voluntarios from "./pages/voluntarios";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Usuarios from "./pages/Usuarios";
+import Entidades from "./pages/Entidades";
+import Voluntarios from "./pages/Voluntarios";
 import Reportar from "./pages/Reportar";
-import NotFound from "./pages/notfound";
+import NotFound from "./pages/NotFound";
 import Mapa from "./pages/Mapa";
 import Alertas from "./pages/Alertas";
 import Crises from "./pages/Crises";
@@ -22,6 +24,8 @@ function App() {
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           <Route path="/" element={
             <ProtectedRoute>

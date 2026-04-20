@@ -60,6 +60,58 @@
     --sidebar-ring: 358 44% 52%;
     --sidebar-muted: 0 8% 42%;
   }
+
+  .dark {
+    --background: 0 10% 8%;
+    --foreground: 0 8% 92%;
+
+    --card: 0 12% 12%;
+    --card-foreground: 0 8% 92%;
+
+    --popover: 0 12% 12%;
+    --popover-foreground: 0 8% 92%;
+
+    --primary: 358 44% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 358 20% 20%;
+    --secondary-foreground: 358 44% 62%;
+
+    --muted: 0 8% 18%;
+    --muted-foreground: 0 8% 58%;
+
+    --accent: 359 58% 52%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 8% 20%;
+    --input: 0 8% 18%;
+    --ring: 358 44% 52%;
+
+    /* Crisis severity tokens - dark mode adjusted */
+    --crisis-critical: 0 80% 55%;
+    --crisis-high: 25 95% 58%;
+    --crisis-medium: 45 93% 52%;
+    --crisis-low: 142 71% 50%;
+    --crisis-resolved: 210 16% 65%;
+
+    /* Semantic - dark mode */
+    --success: 142 71% 50%;
+    --warning: 45 93% 52%;
+    --info: 210 60% 55%;
+
+    --sidebar-background: 0 20% 6%;
+    --sidebar-foreground: 0 8% 82%;
+    --sidebar-primary: 358 44% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 14% 12%;
+    --sidebar-accent-foreground: 0 8% 92%;
+    --sidebar-border: 0 10% 14%;
+    --sidebar-ring: 358 44% 52%;
+    --sidebar-muted: 0 8% 38%;
+  }
 }
 
 @layer base {

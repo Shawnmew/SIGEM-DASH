@@ -1,7 +1,7 @@
 // src/pages/Login.tsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/authcontext";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 const LoginPage = () => {
@@ -100,6 +100,15 @@ const LoginPage = () => {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+
+            <div className="text-right">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                Esqueci minha senha?
+              </Link>
             </div>
 
             <button
