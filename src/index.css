@@ -157,3 +157,123 @@
 .animate-slide-up {
   animation: slide-up 0.35s ease-out forwards;
 }
+
+/* ============================================
+   ACCESSIBILITY STYLES
+   ============================================ */
+
+/* Focus indicators - always visible */
+*:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+}
+
+/* Skip to content link */
+.skip-to-content {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: hsl(var(--primary));
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    z-index: 100;
+    transition: top 0.2s;
+}
+
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* High contrast mode */
+.high-contrast {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --primary: 358 44% 52%;
+    --primary-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+}
+
+.high-contrast.dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --border: 0 0% 100%;
+}
+
+/* Font size variations */
+[data-font-size="large"] {
+    font-size: 112%;
+}
+
+[data-font-size="x-large"] {
+    font-size: 125%;
+}
+
+[data-font-size="large"] h1,
+[data-font-size="x-large"] h1 {
+    font-size: 1.8em;
+}
+
+[data-font-size="large"] button,
+[data-font-size="x-large"] button,
+[data-font-size="large"] a,
+[data-font-size="x-large"] a {
+    font-size: 1em;
+}
+
+/* Screen reader only class */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Focus visible utility */
+.focus-visible\:ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* Ensure interactive elements have sufficient contrast */
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Announcements for screen readers */
+[role="status"],
+[aria-live="polite"],
+[aria-live="assertive"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}

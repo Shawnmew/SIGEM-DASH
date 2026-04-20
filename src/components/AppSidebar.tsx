@@ -84,27 +84,40 @@ export function AppSidebar() {
 
   return (
     <>
+      {/* Mobile menu button */}
       <button
         className={`fixed top-4 left-4 z-50 p-2 rounded-lg ${
           isSidebarDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-800 shadow-md'
-        } lg:hidden`}
+        } lg:hidden focus:outline-none focus:ring-2 focus:ring-primary`}
         onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+        aria-expanded={mobileOpen}
       >
-        {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
       </button>
 
+      {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <div 
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden" 
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
       )}
 
+      {/* Sidebar */}
       <aside
         className={`fixed lg:sticky top-0 left-0 z-40 h-screen flex flex-col transition-all duration-200 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } ${collapsed ? "w-[60px]" : "w-60"} ${sidebarBgClass} ${sidebarBorderClass}`}
+        role="navigation"
+        aria-label="Menu principal"
+        aria-expanded={!collapsed}
       >
+        {/* Logo */}
         <div className={`flex items-center gap-2.5 py-5 border-b ${sidebarBorderClass} ${collapsed ? "px-3 justify-center" : "px-4"}`}>
           <div className={`flex-shrink-0 w-8 h-8 rounded-lg ${sidebarLogoBgClass} flex items-center justify-center`}>
-            <Shield className="h-4 w-4 text-white" />
+            <Shield className="h-4 w-4 text-white" aria-hidden="true" />
           </div>
           {!collapsed && (
             <div>
@@ -114,29 +127,32 @@ export function AppSidebar() {
           )}
         </div>
 
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+        {/* Navigation */}
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto" aria-label="Itens do menu">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
                   isActive
                     ? navLinkActiveClass
                     : navLinkInactiveClass
                 } ${collapsed ? "justify-center" : ""}`
               }
+              aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
             >
-              <item.icon className="h-4 w-4 flex-shrink-0" />
+              <item.icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
               {!collapsed && <span>{item.title}</span>}
             </NavLink>
           ))}
         </nav>
 
+        {/* Footer */}
         <div className={`border-t ${sidebarBorderClass} p-2 space-y-1`}>
           {!collapsed && user && (
-            <div className="px-2.5 py-1">
+            <div className="px-2.5 py-1" aria-label="Informações do usuário">
               <p className={`text-[10px] ${userEmailClass} truncate`}>{user.email}</p>
               <p className={`text-[9px] ${userRoleClass} mt-0.5`}>
                 {isAdmin ? 'Administrador' : isEntidade ? 'Entidade Promotora' : 'Usuário'}
@@ -144,31 +160,37 @@ export function AppSidebar() {
             </div>
           )}
           
-          {/* Botão de toggle de tema na sidebar */}
+          {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors w-full ${navLinkInactiveClass} ${collapsed ? "justify-center" : ""}`}
+            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors w-full focus:outline-none focus:ring-2 focus:ring-primary ${navLinkInactiveClass} ${collapsed ? "justify-center" : ""}`}
+            aria-label={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
           >
             {theme === 'light' ? (
-              <Moon className="h-4 w-4 flex-shrink-0" />
+              <Moon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
             ) : (
-              <Sun className="h-4 w-4 flex-shrink-0" />
+              <Sun className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
             )}
             {!collapsed && <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>}
           </button>
           
+          {/* Logout Button */}
           <button
             onClick={signOut}
-            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors w-full ${navLinkInactiveClass} ${collapsed ? "justify-center" : ""}`}
+            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors w-full focus:outline-none focus:ring-2 focus:ring-primary ${navLinkInactiveClass} ${collapsed ? "justify-center" : ""}`}
+            aria-label="Sair do sistema"
           >
-            <LogOut className="h-4 w-4 flex-shrink-0" />
+            <LogOut className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
             {!collapsed && <span>Sair</span>}
           </button>
+          
+          {/* Collapse Button */}
           <button
-            className={`hidden lg:flex items-center justify-center w-full py-1.5 ${toggleButtonClass} transition-colors`}
+            className={`hidden lg:flex items-center justify-center w-full py-1.5 ${toggleButtonClass} transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-lg`}
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
           >
-            {collapsed ? <ChevronsRight className="h-3.5 w-3.5" /> : <ChevronsLeft className="h-3.5 w-3.5" />}
+            {collapsed ? <ChevronsRight className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronsLeft className="h-3.5 w-3.5" aria-hidden="true" />}
           </button>
         </div>
       </aside>
