@@ -8,7 +8,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Usuarios from "./pages/usuarios";
 import Entidades from "./pages/entidades";
-import Voluntarios from "./pages/Voluntarios";
+import Voluntarios from "./pages/voluntarios";
 import Reportar from "./pages/Reportar";
 import NotFound from "./pages/NotFound";
 import Mapa from "./pages/Mapa";
