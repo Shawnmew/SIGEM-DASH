@@ -16,6 +16,7 @@ import Alertas from "./pages/Alertas";
 import Crises from "./pages/Crises";
 import Relatorios from "./pages/Relatorios";
 import CriseDetalhes from "./pages/CriseDetalhes";
+import LogsAuditoria from "./pages/LogsAuditoria";
 
 function App() {
   return (
@@ -62,6 +63,11 @@ function App() {
           <Route path="/crises" element={<ProtectedRoute><Crises /></ProtectedRoute>} />
           <Route path="/crises/:id" element={<ProtectedRoute><CriseDetalhes /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
+          <Route path="/logs-auditoria" element={
+            <ProtectedRoute requireAdmin>
+              <LogsAuditoria />
+            </ProtectedRoute>
+          } />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
-import { useAuth } from "@/contexts/authcontext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Filter } from "lucide-react";
 
 interface Usuario {
   id: number;
@@ -310,10 +311,10 @@ const UsuariosPage = () => {
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, string> = {
-      activo: "bg-green-100 text-green-800",
-      inactivo: "bg-gray-100 text-gray-800",
-      bloqueado: "bg-red-100 text-red-800",
-      pendente: "bg-yellow-100 text-yellow-800"
+      activo: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400",
+      inactivo: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400",
+      bloqueado: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400",
+      pendente: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[status] || config.pendente}`}>
       {status === 'activo' ? 'Ativo' : status === 'inactivo' ? 'Inativo' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'}
@@ -322,10 +323,10 @@ const UsuariosPage = () => {
 
   const getTipoBadge = (tipo: string) => {
     const config: Record<string, string> = {
-      admin: "bg-purple-100 text-purple-800",
-      operador: "bg-blue-100 text-blue-800",
-      voluntario: "bg-green-100 text-green-800",
-      cidadao: "bg-gray-100 text-gray-800"
+      admin: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400",
+      operador: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400",
+      voluntario: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400",
+      cidadao: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400"
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[tipo] || config.cidadao}`}>
       {tipo === 'admin' ? 'Admin' : tipo === 'operador' ? 'Operador' : tipo === 'voluntario' ? 'Voluntário' : 'Cidadão'}
@@ -347,9 +348,9 @@ const UsuariosPage = () => {
       <div className="mb-6 pl-12 lg:pl-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold flex items-center gap-2">
+            <h1 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
               Usuários
-              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">Admin</span>
+              <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 px-2 py-1 rounded-full">Admin</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Gestão de usuários do sistema</p>
           </div>
@@ -357,10 +358,15 @@ const UsuariosPage = () => {
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-card rounded-lg shadow p-4">
         <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
           <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
-            <Input placeholder="Buscar por nome, email ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="w-64" />
+            <Input 
+              placeholder="Buscar por nome, email ou telefone..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              className="w-64" 
+            />
             <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Tipo" /></SelectTrigger>
               <SelectContent>
@@ -420,57 +426,132 @@ const UsuariosPage = () => {
         
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Nome</TableHead><TableHead>Email</TableHead><TableHead>Telefone</TableHead><TableHead>Tipo</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="text-foreground">ID</TableHead>
+                <TableHead className="text-foreground">Nome</TableHead>
+                <TableHead className="text-foreground">Email</TableHead>
+                <TableHead className="text-foreground">Telefone</TableHead>
+                <TableHead className="text-foreground">Tipo</TableHead>
+                <TableHead className="text-foreground">Status</TableHead>
+                <TableHead className="text-right text-foreground">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={7} className="text-center py-8"><div className="flex justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div></TableCell></TableRow>
-              : usuarios.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-8">Nenhum usuário encontrado.</TableCell></TableRow>
-              : usuarios.map(usuario => (
-                <TableRow key={usuario.id}>
-                  <TableCell>{usuario.id}</TableCell>
-                  <TableCell className="font-medium">{usuario.nome} {usuario.sobrenome}</TableCell>
-                  <TableCell>{usuario.email}</TableCell>
-                  <TableCell>{usuario.telefone || "-"}</TableCell>
-                  <TableCell>{getTipoBadge(usuario.tipo || "cidadao")}</TableCell>
-                  <TableCell>{getStatusBadge(usuario.status)}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedUser(usuario)}>Ver</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader>
-                        <div className="space-y-2"><div><b>ID:</b> {selectedUser?.id}</div><div><b>Nome:</b> {selectedUser?.nome} {selectedUser?.sobrenome}</div><div><b>Email:</b> {selectedUser?.email}</div><div><b>Telefone:</b> {selectedUser?.telefone || "-"}</div><div><b>Tipo:</b> {selectedUser?.tipo || "Cidadão"}</div><div><b>Status:</b> {getStatusBadge(selectedUser?.status || "pendente")}</div></div>
-                        <DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Dialog open={showEdit && editUser?.id === usuario.id} onOpenChange={setShowEdit}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditUser(usuario); setShowEdit(true); }}>Editar</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader>
-                        <form onSubmit={handleUpdateUser} className="space-y-3">
-                          <Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
-                          <Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" />
-                          <Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
-                          <Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" />
-                          <Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="admin">Admin</SelectItem><SelectItem value="operador">Operador</SelectItem><SelectItem value="voluntario">Voluntário</SelectItem><SelectItem value="cidadao">Cidadão</SelectItem></SelectContent></Select>
-                          <DialogFooter><Button type="submit">Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose></DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Dialog open={showApprove && selectedUser?.id === usuario.id} onOpenChange={setShowApprove}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedUser(usuario); setStatusToApprove(usuario.status); }}>Status</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader>
-                        <Select value={statusToApprove} onValueChange={setStatusToApprove}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem><SelectItem value="pendente">Pendente</SelectItem></SelectContent></Select>
-                        <DialogFooter><Button onClick={handleStatusChange}>Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose></DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Dialog open={showPenalize && selectedUser?.id === usuario.id} onOpenChange={setShowPenalize}><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowPenalize(true); setSelectedUser(usuario); }}>Penalizar</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Penalizar Usuário</DialogTitle></DialogHeader>
-                        <Textarea placeholder="Motivo da penalização..." value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} rows={4} />
-                        <DialogFooter><Button onClick={handlePenalizeUser}>Penalizar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button></DialogClose></DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    
-                    {currentUser?.id !== usuario.id && <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(usuario.id)}>Remover</Button>}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex justify-center">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="ml-2 text-muted-foreground">Carregando...</span>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : usuarios.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    Nenhum usuário encontrado.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                usuarios.map(usuario => (
+                  <TableRow key={usuario.id} className="border-b border-border">
+                    <TableCell className="text-foreground">{usuario.id}</TableCell>
+                    <TableCell className="font-medium text-foreground">{usuario.nome} {usuario.sobrenome}</TableCell>
+                    <TableCell className="text-foreground">{usuario.email}</TableCell>
+                    <TableCell className="text-foreground">{usuario.telefone || "-"}</TableCell>
+                    <TableCell>{getTipoBadge(usuario.tipo || "cidadao")}</TableCell>
+                    <TableCell>{getStatusBadge(usuario.status)}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => setSelectedUser(usuario)}>Ver</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader>
+                          <div className="space-y-2">
+                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">ID:</b><span className="text-foreground">{selectedUser?.id}</span></div>
+                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Nome:</b><span className="text-foreground">{selectedUser?.nome} {selectedUser?.sobrenome}</span></div>
+                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Email:</b><span className="text-foreground">{selectedUser?.email}</span></div>
+                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Telefone:</b><span className="text-foreground">{selectedUser?.telefone || "-"}</span></div>
+                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Tipo:</b><span className="text-foreground">{selectedUser?.tipo || "Cidadão"}</span></div>
+                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Status:</b>{getStatusBadge(selectedUser?.status || "pendente")}</div>
+                          </div>
+                          <DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <Dialog open={showEdit && editUser?.id === usuario.id} onOpenChange={setShowEdit}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => { setEditUser(usuario); setShowEdit(true); }}>Editar</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader>
+                          <form onSubmit={handleUpdateUser} className="space-y-3">
+                            <Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
+                            <Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" />
+                            <Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
+                            <Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" />
+                            <Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="operador">Operador</SelectItem>
+                                <SelectItem value="voluntario">Voluntário</SelectItem>
+                                <SelectItem value="cidadao">Cidadão</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <DialogFooter>
+                              <Button type="submit">Salvar</Button>
+                              <DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <Dialog open={showApprove && selectedUser?.id === usuario.id} onOpenChange={setShowApprove}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedUser(usuario); setStatusToApprove(usuario.status); }}>Status</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader>
+                          <Select value={statusToApprove} onValueChange={setStatusToApprove}>
+                            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="activo">Ativo</SelectItem>
+                              <SelectItem value="inactivo">Inativo</SelectItem>
+                              <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                              <SelectItem value="pendente">Pendente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <DialogFooter>
+                            <Button onClick={handleStatusChange}>Salvar</Button>
+                            <DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <Dialog open={showPenalize && selectedUser?.id === usuario.id} onOpenChange={setShowPenalize}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => { setShowPenalize(true); setSelectedUser(usuario); }}>Penalizar</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader><DialogTitle>Penalizar Usuário</DialogTitle></DialogHeader>
+                          <Textarea placeholder="Motivo da penalização..." value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} rows={4} />
+                          <DialogFooter>
+                            <Button onClick={handlePenalizeUser}>Penalizar</Button>
+                            <DialogClose asChild><Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button></DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      {currentUser?.id !== usuario.id && (
+                        <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(usuario.id)}>Remover</Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
@@ -478,18 +559,40 @@ const UsuariosPage = () => {
         {meta && meta.last_page > 1 && (
           <Pagination className="mt-4">
             <PaginationContent>
-              <PaginationItem><PaginationPrevious onClick={() => setPage(p => Math.max(1, p - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} /></PaginationItem>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setPage(p => Math.max(1, p - 1))} 
+                  className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} 
+                />
+              </PaginationItem>
               {Array.from({ length: Math.min(meta.last_page, 7) }, (_, i) => {
                 let pageNum = i + 1;
-                if (pageNum <= meta.last_page && pageNum > 0) return <PaginationItem key={pageNum}><PaginationLink isActive={page === pageNum} onClick={() => setPage(pageNum)}>{pageNum}</PaginationLink></PaginationItem>;
+                if (pageNum <= meta.last_page && pageNum > 0) {
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink isActive={page === pageNum} onClick={() => setPage(pageNum)}>
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                }
                 return null;
               })}
-              <PaginationItem><PaginationNext onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} className={page === meta.last_page ? "pointer-events-none opacity-50" : "cursor-pointer"} /></PaginationItem>
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} 
+                  className={page === meta.last_page ? "pointer-events-none opacity-50" : "cursor-pointer"} 
+                />
+              </PaginationItem>
             </PaginationContent>
           </Pagination>
         )}
         
-        {meta && <div className="mt-4 text-xs text-muted-foreground text-center">Mostrando {meta.from} a {meta.to} de {meta.total} usuários</div>}
+        {meta && (
+          <div className="mt-4 text-xs text-muted-foreground text-center">
+            Mostrando {meta.from} a {meta.to} de {meta.total} usuários
+          </div>
+        )}
       </div>
     </AppLayout>
   );

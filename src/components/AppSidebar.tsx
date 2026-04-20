@@ -16,9 +16,10 @@ import {
   ChevronsRight,
   Sun,
   Moon,
+  Activity,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/authcontext";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const adminNavItems = [
@@ -31,6 +32,7 @@ const adminNavItems = [
   { title: "Voluntários", icon: Users, path: "/voluntarios" },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Alertas", icon: Bell, path: "/alertas" },
+  { title: "Logs Auditoria", icon: Activity, path: "/logs-auditoria" },
 ];
 
 const entidadeNavItems = [
