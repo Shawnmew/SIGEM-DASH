@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,12 +37,9 @@ interface MunicipioDetectado {
     distancia: number;
 }
 
-interface IncidenteForm {
-    title: string;
-    descricao: string;
-    categoria_id: string;
-    latitude: number | null;
-    longitude: number | null;
+interface Position {
+    lat: number;
+    lng: number;
 }
 
 interface FileUpload {
@@ -51,10 +48,87 @@ interface FileUpload {
     tipo: 'foto' | 'video' | 'audio' | 'documento';
 }
 
-interface Position {
-    lat: number;
-    lng: number;
-}
+// Componente de Mapa isolado com memo para evitar re-renderizações
+const MapComponent = memo(({ 
+    userLocation, 
+    onLocationSelect, 
+    initialLocation 
+}: { 
+    userLocation: Position | null; 
+    onLocationSelect: (lat: number, lng: number) => void;
+    initialLocation: Position | null;
+}) => {
+    const mapCenter: [number, number] = userLocation 
+        ? [userLocation.lat, userLocation.lng] 
+        : [-12.3, 17.5];
+
+    function LocationMarker() {
+        const [position, setPosition] = useState<L.LatLng | null>(
+            initialLocation ? L.latLng(initialLocation.lat, initialLocation.lng) : null
+        );
+
+        useMapEvents({
+            click(e) {
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+                
+                if (userLocation) {
+                    const distancia = calcularDistancia(userLocation.lat, userLocation.lng, lat, lng);
+                    if (distancia > 1) {
+                        toast.error(`Localização muito distante! O incidente deve estar a menos de 1km da sua localização atual. Distância: ${distancia.toFixed(2)}km`);
+                        return;
+                    }
+                }
+                
+                setPosition(e.latlng);
+                onLocationSelect(lat, lng);
+                toast.success("Localização selecionada no mapa!");
+            },
+        });
+
+        useEffect(() => {
+            if (initialLocation) {
+                setPosition(L.latLng(initialLocation.lat, initialLocation.lng));
+            }
+        }, [initialLocation]);
+
+        return position === null ? null : (
+            <>
+                <Marker position={position}>
+                    <Popup>
+                        Localização selecionada<br />
+                        Lat: {position.lat.toFixed(6)}<br />
+                        Lng: {position.lng.toFixed(6)}
+                    </Popup>
+                </Marker>
+            </>
+        );
+    }
+
+    return (
+        <MapContainer
+            center={mapCenter}
+            zoom={13}
+            style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom={true}
+        >
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <LocationMarker />
+            {userLocation && (
+                <Circle
+                    center={[userLocation.lat, userLocation.lng]}
+                    radius={1000}
+                    pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1 }}
+                />
+            )}
+        </MapContainer>
+    );
+});
+
+MapComponent.displayName = 'MapComponent';
 
 function calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371;
@@ -67,55 +141,6 @@ function calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: numbe
     return R * c;
 }
 
-function LocationMarker({ setLocation, userLocation, onLocationConfirmed }: { 
-    setLocation: (lat: number, lng: number) => void;
-    userLocation: Position | null;
-    onLocationConfirmed: (lat: number, lng: number) => void;
-}) {
-    const [position, setPosition] = useState<L.LatLng | null>(
-        userLocation ? L.latLng(userLocation.lat, userLocation.lng) : null
-    );
-
-    useMapEvents({
-        click(e) {
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-            
-            if (userLocation) {
-                const distancia = calcularDistancia(userLocation.lat, userLocation.lng, lat, lng);
-                if (distancia > 1) {
-                    toast.error(`Localização muito distante! O incidente deve estar a menos de 1km da sua localização atual. Distância: ${distancia.toFixed(2)}km`);
-                    return;
-                }
-            }
-            
-            setPosition(e.latlng);
-            setLocation(lat, lng);
-            onLocationConfirmed(lat, lng);
-            toast.success("Localização selecionada no mapa!");
-        },
-    });
-
-    return position === null ? null : (
-        <>
-            <Marker position={position}>
-                <Popup>
-                    Localização selecionada<br />
-                    Lat: {position.lat.toFixed(6)}<br />
-                    Lng: {position.lng.toFixed(6)}
-                </Popup>
-            </Marker>
-            {userLocation && (
-                <Circle
-                    center={[userLocation.lat, userLocation.lng]}
-                    radius={1000}
-                    pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1 }}
-                />
-            )}
-        </>
-    );
-}
-
 const ReportarPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -126,17 +151,30 @@ const ReportarPage = () => {
     const [municipioDetectado, setMunicipioDetectado] = useState<MunicipioDetectado | null>(null);
     const [userLocation, setUserLocation] = useState<Position | null>(null);
     const [locationError, setLocationError] = useState<string | null>(null);
-    const [formData, setFormData] = useState<IncidenteForm>({
-        title: "",
-        descricao: "",
-        categoria_id: "",
-        latitude: null,
-        longitude: null
-    });
+    
+    // Estado do formulário
+    const [title, setTitle] = useState("");
+    const [descricao, setDescricao] = useState("");
+    const [categoriaId, setCategoriaId] = useState("");
+    const [selectedLat, setSelectedLat] = useState<number | null>(null);
+    const [selectedLng, setSelectedLng] = useState<number | null>(null);
+    
     const [files, setFiles] = useState<FileUpload[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [mapCenter, setMapCenter] = useState<[number, number]>([-12.3, 17.5]);
     const [municipios, setMunicipios] = useState<any[]>([]);
+
+    const isMounted = useRef(true);
+    const municipioDetectadoRef = useRef(municipioDetectado);
+
+    useEffect(() => {
+        municipioDetectadoRef.current = municipioDetectado;
+    }, [municipioDetectado]);
+
+    useEffect(() => {
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         loadInitialData();
@@ -146,23 +184,26 @@ const ReportarPage = () => {
     const loadInitialData = async () => {
         setLoadingData(true);
         try {
-            const categoriasRes = await api.get('/categorias');
+            const [categoriasRes, municipiosRes] = await Promise.all([
+                api.get('/categorias'),
+                api.get('/municipios')
+            ]);
+            
             const categoriasData = categoriasRes.data.data || categoriasRes.data || [];
             setCategorias(categoriasData);
-            
-            // Carregar municípios para fallback
-            const municipiosRes = await api.get('/municipios');
             setMunicipios(municipiosRes.data.data || []);
             
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
             toast.error("Erro ao carregar dados necessários");
         } finally {
-            setLoadingData(false);
+            if (isMounted.current) {
+                setLoadingData(false);
+            }
         }
     };
 
-    const detectarMunicipioPorLocalizacao = async (lat: number, lng: number) => {
+    const detectarMunicipioPorLocalizacao = useCallback(async (lat: number, lng: number) => {
         try {
             console.log('Detectando município para:', lat, lng);
             const response = await api.get('/municipios/detect', {
@@ -171,59 +212,32 @@ const ReportarPage = () => {
             
             console.log('Resposta da detecção:', response.data);
             
-            if (response.data.success && response.data.data) {
+            if (response.data.success && response.data.data && isMounted.current) {
                 const municipio = response.data.data;
                 setMunicipioDetectado(municipio);
-                toast.success(`Município detectado: ${municipio.nome}${municipio.distancia ? ` (${municipio.distancia.toFixed(2)}km do centro)` : ''}`);
+                toast.success(`Município detectado: ${municipio.nome}`);
                 return municipio;
-            } else {
-                // Fallback: usar o primeiro município da lista
-                if (municipios.length > 0) {
-                    const fallbackMunicipio = municipios[0];
-                    setMunicipioDetectado({
-                        id: fallbackMunicipio.id,
-                        nome: fallbackMunicipio.nome,
-                        provincia_id: fallbackMunicipio.provincia_id,
-                        provincia_nome: fallbackMunicipio.provincia?.nome,
-                        distancia: 0
-                    });
-                    toast.warning(`Não foi possível detectar o município automaticamente. Use o município: ${fallbackMunicipio.nome}`);
-                } else {
-                    setMunicipioDetectado(null);
-                    toast.error("Não foi possível detectar o município. Selecione manualmente.");
-                }
-                return null;
-            }
-        } catch (error: any) {
-            console.error("Erro ao detectar município:", error);
-            
-            // Fallback: usar o primeiro município da lista
-            if (municipios.length > 0) {
-                const fallbackMunicipio = municipios[0];
+            } else if (municipios.length > 0 && isMounted.current) {
+                const fallback = municipios[0];
                 setMunicipioDetectado({
-                    id: fallbackMunicipio.id,
-                    nome: fallbackMunicipio.nome,
-                    provincia_id: fallbackMunicipio.provincia_id,
-                    provincia_nome: fallbackMunicipio.provincia?.nome,
+                    id: fallback.id,
+                    nome: fallback.nome,
+                    provincia_id: fallback.provincia_id,
+                    provincia_nome: fallback.provincia?.nome,
                     distancia: 0
                 });
-                toast.warning(`Erro na detecção automática. Usando município: ${fallbackMunicipio.nome}`);
-            } else {
-                setMunicipioDetectado(null);
-                toast.error("Erro ao detectar município. Verifique sua conexão.");
             }
             return null;
+        } catch (error) {
+            console.error("Erro ao detectar município:", error);
+            return null;
         }
-    };
+    }, [municipios]);
 
     const getCurrentLocation = () => {
-        setLoadingLocation(true);
-        setLocationError(null);
-        
         if (!navigator.geolocation) {
-            setLocationError("Geolocalização não é suportada pelo seu navegador");
+            setLocationError("Geolocalização não suportada");
             setLoadingLocation(false);
-            toast.error("Geolocalização não suportada");
             return;
         }
 
@@ -231,66 +245,51 @@ const ReportarPage = () => {
             async (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                setUserLocation({ lat, lng });
-                setMapCenter([lat, lng]);
-                setFormData(prev => ({
-                    ...prev,
-                    latitude: lat,
-                    longitude: lng
-                }));
                 
-                // Detectar município automaticamente
+                if (isMounted.current) {
+                    setUserLocation({ lat, lng });
+                    setSelectedLat(lat);
+                    setSelectedLng(lng);
+                    setLoadingLocation(false);
+                    toast.success("Localização capturada!");
+                }
+                
                 await detectarMunicipioPorLocalizacao(lat, lng);
-                
-                setLoadingLocation(false);
-                toast.success("Localização capturada com sucesso!");
             },
             (error) => {
-                console.error("Erro ao obter localização:", error);
-                let errorMessage = "Erro ao obter localização. ";
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage += "Permissão negada. Por favor, permita o acesso à localização.";
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage += "Informação de localização indisponível.";
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage += "Tempo limite excedido.";
-                        break;
-                    default:
-                        errorMessage += "Tente novamente.";
-                }
-                setLocationError(errorMessage);
+                console.error("Erro de localização:", error);
+                setLocationError("Não foi possível obter sua localização");
                 setLoadingLocation(false);
-                toast.error(errorMessage);
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
+            { enableHighAccuracy: true, timeout: 10000 }
         );
     };
 
-    const updateLocation = async (lat: number, lng: number) => {
-        if (userLocation) {
-            const distancia = calcularDistancia(userLocation.lat, userLocation.lng, lat, lng);
-            if (distancia > 1) {
-                toast.error(`Localização muito distante! O incidente deve estar a menos de 1km da sua localização atual. Distância: ${distancia.toFixed(2)}km`);
-                return false;
-            }
+    const handleLocationSelect = useCallback((lat: number, lng: number) => {
+        setSelectedLat(lat);
+        setSelectedLng(lng);
+        detectarMunicipioPorLocalizacao(lat, lng);
+    }, [detectarMunicipioPorLocalizacao]);
+
+    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTitle(e.target.value);
+        if (errors.title) {
+            setErrors(prev => ({ ...prev, title: undefined }));
         }
-        
-        setFormData(prev => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng
-        }));
-        
-        // Detectar município automaticamente quando selecionar no mapa
-        await detectarMunicipioPorLocalizacao(lat, lng);
-        return true;
+    };
+
+    const handleDescricaoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setDescricao(e.target.value);
+        if (errors.descricao) {
+            setErrors(prev => ({ ...prev, descricao: undefined }));
+        }
+    };
+
+    const handleCategoriaChange = (value: string) => {
+        setCategoriaId(value);
+        if (errors.categoria_id) {
+            setErrors(prev => ({ ...prev, categoria_id: undefined }));
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,45 +297,26 @@ const ReportarPage = () => {
         const newFiles: FileUpload[] = selectedFiles.map(file => ({
             file,
             preview: URL.createObjectURL(file),
-            tipo: getFileType(file.type)
+            tipo: file.type.startsWith('image/') ? 'foto' : 
+                  file.type.startsWith('video/') ? 'video' : 
+                  file.type.startsWith('audio/') ? 'audio' : 'documento'
         }));
-        
-        setFiles([...files, ...newFiles]);
-    };
-
-    const getFileType = (mimeType: string): 'foto' | 'video' | 'audio' | 'documento' => {
-        if (mimeType.startsWith('image/')) return 'foto';
-        if (mimeType.startsWith('video/')) return 'video';
-        if (mimeType.startsWith('audio/')) return 'audio';
-        return 'documento';
+        setFiles(prev => [...prev, ...newFiles]);
     };
 
     const removeFile = (index: number) => {
         URL.revokeObjectURL(files[index].preview);
-        setFiles(files.filter((_, i) => i !== index));
+        setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-        
-        if (!formData.title.trim()) {
-            newErrors.title = "Título é obrigatório";
-        }
-        if (!formData.descricao.trim()) {
-            newErrors.descricao = "Descrição é obrigatória";
-        }
-        if (!formData.categoria_id) {
-            newErrors.categoria_id = "Selecione uma categoria";
-        }
-        if (!formData.latitude || !formData.longitude) {
-            newErrors.location = "Selecione a localização no mapa";
-        }
-        if (!userLocation) {
-            newErrors.gps = "Permita o acesso à localização para reportar um incidente";
-        }
-        if (!municipioDetectado) {
-            newErrors.municipio = "Selecione um município válido";
-        }
+        if (!title.trim()) newErrors.title = "Título é obrigatório";
+        if (!descricao.trim()) newErrors.descricao = "Descrição é obrigatória";
+        if (!categoriaId) newErrors.categoria_id = "Selecione uma categoria";
+        if (!selectedLat || !selectedLng) newErrors.location = "Selecione a localização no mapa";
+        if (!userLocation) newErrors.gps = "Permita o acesso à localização";
+        if (!municipioDetectadoRef.current) newErrors.municipio = "Município não detectado";
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -350,21 +330,17 @@ const ReportarPage = () => {
             return;
         }
 
-        if (userLocation && formData.latitude && formData.longitude) {
-            const distancia = calcularDistancia(
-                userLocation.lat, 
-                userLocation.lng, 
-                formData.latitude, 
-                formData.longitude
-            );
+        if (userLocation && selectedLat && selectedLng) {
+            const distancia = calcularDistancia(userLocation.lat, userLocation.lng, selectedLat, selectedLng);
             if (distancia > 1) {
-                toast.error(`Localização inválida! O incidente está a ${distancia.toFixed(2)}km da sua localização atual. O limite é 1km.`);
+                toast.error(`Localização inválida! Distância de ${distancia.toFixed(2)}km (limite 1km)`);
                 return;
             }
         }
 
-        if (!municipioDetectado) {
-            toast.error("Selecione um município válido.");
+        const municipioAtual = municipioDetectadoRef.current;
+        if (!municipioAtual) {
+            toast.error("Município não detectado");
             return;
         }
 
@@ -372,12 +348,12 @@ const ReportarPage = () => {
 
         try {
             const incidenteData = {
-                title: formData.title,
-                descricao: formData.descricao,
-                categoria_id: parseInt(formData.categoria_id),
-                municipio_id: municipioDetectado.id,
-                latitude: formData.latitude?.toString(),
-                longitude: formData.longitude?.toString(),
+                title: title.trim(),
+                descricao: descricao.trim(),
+                categoria_id: parseInt(categoriaId),
+                municipio_id: municipioAtual.id,
+                latitude: selectedLat?.toString(),
+                longitude: selectedLng?.toString(),
                 status: "pendente"
             };
 
@@ -386,32 +362,23 @@ const ReportarPage = () => {
             if (incidenteResponse.data.success) {
                 const incidenteId = incidenteResponse.data.data.id;
                 
-                if (files.length > 0) {
-                    for (const fileUpload of files) {
-                        const formDataFile = new FormData();
-                        formDataFile.append('incidente_id', incidenteId.toString());
-                        formDataFile.append('tipo_midia', fileUpload.tipo);
-                        formDataFile.append('arquivo', fileUpload.file);
-                        
-                        await api.post("/midia-incidentes", formDataFile, {
-                            headers: {
-                                'Content-Type': 'multipart/form-data',
-                            }
-                        });
-                    }
+                for (const fileUpload of files) {
+                    const formDataFile = new FormData();
+                    formDataFile.append('incidente_id', incidenteId.toString());
+                    formDataFile.append('tipo_midia', fileUpload.tipo);
+                    formDataFile.append('arquivo', fileUpload.file);
+                    
+                    await api.post("/midia-incidentes", formDataFile, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
                 }
                 
                 toast.success("Incidente reportado com sucesso!");
                 navigate("/crises");
             }
         } catch (error: any) {
-            console.error("Erro ao reportar incidente:", error);
-            
-            if (error.response?.data?.message) {
-                toast.error(error.response.data.message);
-            } else {
-                toast.error("Erro ao reportar incidente");
-            }
+            console.error("Erro:", error);
+            toast.error(error.response?.data?.message || "Erro ao reportar incidente");
         } finally {
             setLoading(false);
         }
@@ -441,6 +408,7 @@ const ReportarPage = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Card de Localização */}
                     <Card className={!userLocation ? "border-red-500" : ""}>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -448,16 +416,14 @@ const ReportarPage = () => {
                                 Localização Obrigatória
                             </CardTitle>
                             <CardDescription>
-                                Para reportar um incidente, você precisa permitir o acesso à sua localização.
-                                O incidente deve estar a menos de 1km da sua localização atual.
-                                O município será detectado automaticamente.
+                                Permita o acesso à localização. O incidente deve estar a menos de 1km da sua localização atual.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {loadingLocation ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-                                    <span>Obtendo sua localização...</span>
+                                    <span>Obtendo localização...</span>
                                 </div>
                             ) : locationError ? (
                                 <div className="text-center py-8">
@@ -469,10 +435,10 @@ const ReportarPage = () => {
                                 </div>
                             ) : userLocation ? (
                                 <div className="space-y-4">
-                                    <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-3 text-green-800 dark:text-green-400 text-sm">
+                                    <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
                                         <div className="flex items-center gap-2">
                                             <CheckCircle className="h-4 w-4" />
-                                            <span>Localização capturada com sucesso!</span>
+                                            <span>Localização capturada!</span>
                                         </div>
                                         <p className="text-xs mt-1">
                                             Lat: {userLocation.lat.toFixed(6)} | Lng: {userLocation.lng.toFixed(6)}
@@ -480,65 +446,31 @@ const ReportarPage = () => {
                                     </div>
 
                                     {municipioDetectado && (
-                                        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-blue-800 dark:text-blue-400 text-sm">
+                                        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm">
                                             <div className="flex items-center gap-2">
                                                 <MapPin className="h-4 w-4" />
-                                                <span>Município Detectado: <strong>{municipioDetectado.nome}</strong></span>
+                                                <span>Município: <strong>{municipioDetectado.nome}</strong></span>
                                             </div>
                                             {municipioDetectado.provincia_nome && (
                                                 <p className="text-xs mt-1">Província: {municipioDetectado.provincia_nome}</p>
-                                            )}
-                                            {municipioDetectado.distancia && (
-                                                <p className="text-xs">Distância do centro: {municipioDetectado.distancia.toFixed(2)}km</p>
                                             )}
                                         </div>
                                     )}
                                     
                                     <div className="h-96 rounded-lg overflow-hidden border">
-                                        <MapContainer
-                                            center={mapCenter}
-                                            zoom={13}
-                                            style={{ height: "100%", width: "100%" }}
-                                            scrollWheelZoom={true}
-                                        >
-                                            <TileLayer
-                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                            />
-                                            <LocationMarker 
-                                                setLocation={updateLocation} 
-                                                userLocation={userLocation}
-                                                onLocationConfirmed={() => {}}
-                                            />
-                                            {formData.latitude && formData.longitude && (
-                                                <Marker position={[formData.latitude, formData.longitude]}>
-                                                    <Popup>
-                                                        Localização do incidente<br />
-                                                        Lat: {formData.latitude.toFixed(6)}<br />
-                                                        Lng: {formData.longitude.toFixed(6)}
-                                                        {municipioDetectado && <br />}
-                                                        {municipioDetectado && `Município: ${municipioDetectado.nome}`}
-                                                    </Popup>
-                                                </Marker>
-                                            )}
-                                            <Circle
-                                                center={[userLocation.lat, userLocation.lng]}
-                                                radius={1000}
-                                                pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1 }}
-                                            />
-                                        </MapContainer>
+                                        <MapComponent 
+                                            userLocation={userLocation}
+                                            onLocationSelect={handleLocationSelect}
+                                            initialLocation={selectedLat && selectedLng ? { lat: selectedLat, lng: selectedLng } : null}
+                                        />
                                     </div>
                                     
                                     <p className="text-xs text-muted-foreground text-center">
-                                        O círculo vermelho mostra o raio de 1km permitido. Clique no mapa dentro do círculo para selecionar a localização do incidente. O município será detectado automaticamente.
+                                        Clique no mapa dentro do círculo vermelho para selecionar a localização exata do incidente.
                                     </p>
                                     
-                                    {errors.location && (
-                                        <p className="text-xs text-red-500 text-center">{errors.location}</p>
-                                    )}
-                                    {errors.municipio && (
-                                        <p className="text-xs text-red-500 text-center">{errors.municipio}</p>
-                                    )}
+                                    {errors.location && <p className="text-xs text-red-500 text-center">{errors.location}</p>}
+                                    {errors.municipio && <p className="text-xs text-red-500 text-center">{errors.municipio}</p>}
                                 </div>
                             ) : (
                                 <div className="text-center py-8">
@@ -557,7 +489,7 @@ const ReportarPage = () => {
                                 <CardHeader>
                                     <CardTitle>Informações do Incidente</CardTitle>
                                     <CardDescription>
-                                        Descreva detalhadamente o incidente que está ocorrendo
+                                        Descreva detalhadamente o incidente
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
@@ -565,8 +497,8 @@ const ReportarPage = () => {
                                         <Label htmlFor="title">Título *</Label>
                                         <Input
                                             id="title"
-                                            value={formData.title}
-                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                            value={title}
+                                            onChange={handleTitleChange}
                                             placeholder="Ex: Inundação no bairro X"
                                             className={errors.title ? "border-red-500" : ""}
                                         />
@@ -577,8 +509,8 @@ const ReportarPage = () => {
                                         <Label htmlFor="descricao">Descrição *</Label>
                                         <Textarea
                                             id="descricao"
-                                            value={formData.descricao}
-                                            onChange={(e) => setFormData({...formData, descricao: e.target.value})}
+                                            value={descricao}
+                                            onChange={handleDescricaoChange}
                                             placeholder="Descreva detalhadamente o incidente..."
                                             rows={5}
                                             className={errors.descricao ? "border-red-500" : ""}
@@ -588,10 +520,7 @@ const ReportarPage = () => {
 
                                     <div>
                                         <Label htmlFor="categoria">Categoria *</Label>
-                                        <Select
-                                            value={formData.categoria_id}
-                                            onValueChange={(value) => setFormData({...formData, categoria_id: value})}
-                                        >
+                                        <Select value={categoriaId} onValueChange={handleCategoriaChange}>
                                             <SelectTrigger className={errors.categoria_id ? "border-red-500" : ""}>
                                                 <SelectValue placeholder="Selecione a categoria" />
                                             </SelectTrigger>
@@ -606,11 +535,10 @@ const ReportarPage = () => {
                                         {errors.categoria_id && <p className="text-xs text-red-500 mt-1">{errors.categoria_id}</p>}
                                     </div>
 
-                                    {/* Município detectado - apenas exibição */}
-                                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border dark:border-gray-700">
-                                        <Label className="text-muted-foreground">Município (Detectado Automaticamente)</Label>
+                                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border">
+                                        <Label className="text-muted-foreground">Município (Detectado)</Label>
                                         <p className="font-medium mt-1 dark:text-white">
-                                            {municipioDetectado ? municipioDetectado.nome : "Aguardando localização..."}
+                                            {municipioDetectado?.nome || "Detectando..."}
                                         </p>
                                         {municipioDetectado?.provincia_nome && (
                                             <p className="text-xs text-muted-foreground mt-1">
@@ -623,9 +551,9 @@ const ReportarPage = () => {
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Mídia</CardTitle>
+                                    <CardTitle>Mídia (Opcional)</CardTitle>
                                     <CardDescription>
-                                        Adicione fotos, vídeos ou documentos relacionados ao incidente
+                                        Adicione fotos, vídeos ou documentos relacionados
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
@@ -638,17 +566,9 @@ const ReportarPage = () => {
                                             onChange={handleFileChange}
                                             className="hidden"
                                         />
-                                        <Label
-                                            htmlFor="file-upload"
-                                            className="cursor-pointer flex flex-col items-center gap-2"
-                                        >
+                                        <Label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
                                             <Upload className="h-8 w-8 text-gray-400" />
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                Clique para selecionar arquivos
-                                            </span>
-                                            <span className="text-xs text-gray-400">
-                                                ou arraste e solte aqui
-                                            </span>
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">Clique para selecionar arquivos</span>
                                         </Label>
                                     </div>
 
@@ -657,11 +577,7 @@ const ReportarPage = () => {
                                             {files.map((file, index) => (
                                                 <div key={index} className="relative group">
                                                     {file.tipo === 'foto' && (
-                                                        <img
-                                                            src={file.preview}
-                                                            alt="Preview"
-                                                            className="w-full h-24 object-cover rounded-lg"
-                                                        />
+                                                        <img src={file.preview} alt="Preview" className="w-full h-24 object-cover rounded-lg" />
                                                     )}
                                                     {(file.tipo === 'video' || file.tipo === 'audio' || file.tipo === 'documento') && (
                                                         <div className="w-full h-24 bg-gray-200 dark:bg-gray-800 rounded-lg flex items-center justify-center">
@@ -675,31 +591,19 @@ const ReportarPage = () => {
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </button>
-                                                    <p className="text-xs text-muted-foreground truncate mt-1">
-                                                        {file.file.name}
-                                                    </p>
+                                                    <p className="text-xs text-muted-foreground truncate mt-1">{file.file.name}</p>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
                                 </CardContent>
                                 <CardFooter className="flex justify-end gap-3">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => navigate("/crises")}
-                                    >
+                                    <Button type="button" variant="outline" onClick={() => navigate("/crises")}>
                                         Cancelar
                                     </Button>
                                     <Button type="submit" disabled={loading || !userLocation || !municipioDetectado}>
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                Enviando...
-                                            </>
-                                        ) : (
-                                            "Reportar Incidente"
-                                        )}
+                                        {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                                        {loading ? "Enviando..." : "Reportar Incidente"}
                                     </Button>
                                 </CardFooter>
                             </Card>
