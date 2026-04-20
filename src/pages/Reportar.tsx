@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import api from "@/lib/api";
-import { useAuth } from "@/contexts/authcontext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { MapPin, Upload, X, FileText, AlertTriangle, Loader2, Navigation, Crosshair, CheckCircle } from "lucide-react";
@@ -136,6 +136,7 @@ const ReportarPage = () => {
     const [files, setFiles] = useState<FileUpload[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [mapCenter, setMapCenter] = useState<[number, number]>([-12.3, 17.5]);
+    const [municipios, setMunicipios] = useState<any[]>([]);
 
     useEffect(() => {
         loadInitialData();
@@ -148,6 +149,11 @@ const ReportarPage = () => {
             const categoriasRes = await api.get('/categorias');
             const categoriasData = categoriasRes.data.data || categoriasRes.data || [];
             setCategorias(categoriasData);
+            
+            // Carregar municípios para fallback
+            const municipiosRes = await api.get('/municipios');
+            setMunicipios(municipiosRes.data.data || []);
+            
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
             toast.error("Erro ao carregar dados necessários");
@@ -158,9 +164,12 @@ const ReportarPage = () => {
 
     const detectarMunicipioPorLocalizacao = async (lat: number, lng: number) => {
         try {
+            console.log('Detectando município para:', lat, lng);
             const response = await api.get('/municipios/detect', {
                 params: { latitude: lat, longitude: lng }
             });
+            
+            console.log('Resposta da detecção:', response.data);
             
             if (response.data.success && response.data.data) {
                 const municipio = response.data.data;
@@ -168,14 +177,41 @@ const ReportarPage = () => {
                 toast.success(`Município detectado: ${municipio.nome}${municipio.distancia ? ` (${municipio.distancia.toFixed(2)}km do centro)` : ''}`);
                 return municipio;
             } else {
-                setMunicipioDetectado(null);
-                toast.error("Não foi possível detectar o município. Verifique se está dentro de Angola.");
+                // Fallback: usar o primeiro município da lista
+                if (municipios.length > 0) {
+                    const fallbackMunicipio = municipios[0];
+                    setMunicipioDetectado({
+                        id: fallbackMunicipio.id,
+                        nome: fallbackMunicipio.nome,
+                        provincia_id: fallbackMunicipio.provincia_id,
+                        provincia_nome: fallbackMunicipio.provincia?.nome,
+                        distancia: 0
+                    });
+                    toast.warning(`Não foi possível detectar o município automaticamente. Use o município: ${fallbackMunicipio.nome}`);
+                } else {
+                    setMunicipioDetectado(null);
+                    toast.error("Não foi possível detectar o município. Selecione manualmente.");
+                }
                 return null;
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Erro ao detectar município:", error);
-            setMunicipioDetectado(null);
-            toast.error("Erro ao detectar município. Tente novamente.");
+            
+            // Fallback: usar o primeiro município da lista
+            if (municipios.length > 0) {
+                const fallbackMunicipio = municipios[0];
+                setMunicipioDetectado({
+                    id: fallbackMunicipio.id,
+                    nome: fallbackMunicipio.nome,
+                    provincia_id: fallbackMunicipio.provincia_id,
+                    provincia_nome: fallbackMunicipio.provincia?.nome,
+                    distancia: 0
+                });
+                toast.warning(`Erro na detecção automática. Usando município: ${fallbackMunicipio.nome}`);
+            } else {
+                setMunicipioDetectado(null);
+                toast.error("Erro ao detectar município. Verifique sua conexão.");
+            }
             return null;
         }
     };
@@ -299,7 +335,7 @@ const ReportarPage = () => {
             newErrors.gps = "Permita o acesso à localização para reportar um incidente";
         }
         if (!municipioDetectado) {
-            newErrors.municipio = "Não foi possível detectar o município. Verifique sua localização.";
+            newErrors.municipio = "Selecione um município válido";
         }
         
         setErrors(newErrors);
@@ -328,7 +364,7 @@ const ReportarPage = () => {
         }
 
         if (!municipioDetectado) {
-            toast.error("Município não detectado. Selecione uma localização válida dentro de Angola.");
+            toast.error("Selecione um município válido.");
             return;
         }
 
@@ -433,7 +469,7 @@ const ReportarPage = () => {
                                 </div>
                             ) : userLocation ? (
                                 <div className="space-y-4">
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
+                                    <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-3 text-green-800 dark:text-green-400 text-sm">
                                         <div className="flex items-center gap-2">
                                             <CheckCircle className="h-4 w-4" />
                                             <span>Localização capturada com sucesso!</span>
@@ -444,7 +480,7 @@ const ReportarPage = () => {
                                     </div>
 
                                     {municipioDetectado && (
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm">
+                                        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-blue-800 dark:text-blue-400 text-sm">
                                             <div className="flex items-center gap-2">
                                                 <MapPin className="h-4 w-4" />
                                                 <span>Município Detectado: <strong>{municipioDetectado.nome}</strong></span>
@@ -570,10 +606,10 @@ const ReportarPage = () => {
                                         {errors.categoria_id && <p className="text-xs text-red-500 mt-1">{errors.categoria_id}</p>}
                                     </div>
 
-                                    {/* Município detectado - apenas exibição, sem edição */}
-                                    <div className="bg-gray-50 rounded-lg p-3 border">
+                                    {/* Município detectado - apenas exibição */}
+                                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border dark:border-gray-700">
                                         <Label className="text-muted-foreground">Município (Detectado Automaticamente)</Label>
-                                        <p className="font-medium mt-1">
+                                        <p className="font-medium mt-1 dark:text-white">
                                             {municipioDetectado ? municipioDetectado.nome : "Aguardando localização..."}
                                         </p>
                                         {municipioDetectado?.provincia_nome && (
@@ -593,7 +629,7 @@ const ReportarPage = () => {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
+                                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center hover:border-primary transition-colors">
                                         <input
                                             type="file"
                                             id="file-upload"
@@ -607,7 +643,7 @@ const ReportarPage = () => {
                                             className="cursor-pointer flex flex-col items-center gap-2"
                                         >
                                             <Upload className="h-8 w-8 text-gray-400" />
-                                            <span className="text-sm text-gray-600">
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">
                                                 Clique para selecionar arquivos
                                             </span>
                                             <span className="text-xs text-gray-400">
@@ -628,7 +664,7 @@ const ReportarPage = () => {
                                                         />
                                                     )}
                                                     {(file.tipo === 'video' || file.tipo === 'audio' || file.tipo === 'documento') && (
-                                                        <div className="w-full h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                                                        <div className="w-full h-24 bg-gray-200 dark:bg-gray-800 rounded-lg flex items-center justify-center">
                                                             <FileText className="h-8 w-8 text-gray-500" />
                                                         </div>
                                                     )}
