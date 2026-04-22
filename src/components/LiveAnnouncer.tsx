@@ -1,4 +1,4 @@
-import React, { useEffect, useState, createContext, useContext, ReactNode } from 'react';
+import React, { useEffect, useState, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 
 interface LiveAnnouncerContextType {
     announce: (message: string, priority?: 'polite' | 'assertive') => void;
@@ -21,16 +21,24 @@ interface LiveAnnouncerProviderProps {
 export const LiveAnnouncerProvider: React.FC<LiveAnnouncerProviderProps> = ({ children }) => {
     const [politeMessage, setPoliteMessage] = useState('');
     const [assertiveMessage, setAssertiveMessage] = useState('');
+    
+    // Usar ref para evitar re-renderizações desnecessárias
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const announce = (message: string, priority: 'polite' | 'assertive' = 'polite') => {
+    const announce = useCallback((message: string, priority: 'polite' | 'assertive' = 'polite') => {
+        // Limpar timeout anterior
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        
         if (priority === 'polite') {
             setPoliteMessage(message);
-            setTimeout(() => setPoliteMessage(''), 1000);
+            timeoutRef.current = setTimeout(() => setPoliteMessage(''), 3000);
         } else {
             setAssertiveMessage(message);
-            setTimeout(() => setAssertiveMessage(''), 1000);
+            timeoutRef.current = setTimeout(() => setAssertiveMessage(''), 3000);
         }
-    };
+    }, []);
 
     return (
         <LiveAnnouncerContext.Provider value={{ announce }}>

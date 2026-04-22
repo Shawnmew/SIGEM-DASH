@@ -5,9 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { MapPin, Upload, X, FileText, AlertTriangle, Loader2, Navigation, Crosshair, CheckCircle } from "lucide-react";
-import { MapContainer, TileLayer, Marker, useMapEvents, Popup, Circle } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { IncidentMap } from "@/components/IncidentMap";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
 
 interface Categoria {
     id: number;
@@ -48,109 +39,53 @@ interface FileUpload {
     tipo: 'foto' | 'video' | 'audio' | 'documento';
 }
 
-// Componente de Mapa isolado com memo para evitar re-renderizações
-const MapComponent = memo(({ 
-    userLocation, 
-    onLocationSelect, 
-    initialLocation 
-}: { 
-    userLocation: Position | null; 
-    onLocationSelect: (lat: number, lng: number) => void;
-    initialLocation: Position | null;
-}) => {
-    const mapCenter: [number, number] = userLocation 
-        ? [userLocation.lat, userLocation.lng] 
-        : [-12.3, 17.5];
+// Componentes de formulário memoizados para evitar re-renderizações
+const TitleInput = memo(({ value, onChange, error }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; error?: string }) => (
+    <div>
+        <Label htmlFor="title">Título *</Label>
+        <Input
+            id="title"
+            name="title"
+            value={value}
+            onChange={onChange}
+            placeholder="Ex: Inundação no bairro X"
+            className={error ? "border-red-500" : ""}
+            autoComplete="off"
+        />
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+));
 
-    function LocationMarker() {
-        const [position, setPosition] = useState<L.LatLng | null>(
-            initialLocation ? L.latLng(initialLocation.lat, initialLocation.lng) : null
-        );
+TitleInput.displayName = 'TitleInput';
 
-        useMapEvents({
-            click(e) {
-                const lat = e.latlng.lat;
-                const lng = e.latlng.lng;
-                
-                if (userLocation) {
-                    const distancia = calcularDistancia(userLocation.lat, userLocation.lng, lat, lng);
-                    if (distancia > 1) {
-                        toast.error(`Localização muito distante! O incidente deve estar a menos de 1km da sua localização atual. Distância: ${distancia.toFixed(2)}km`);
-                        return;
-                    }
-                }
-                
-                setPosition(e.latlng);
-                onLocationSelect(lat, lng);
-                toast.success("Localização selecionada no mapa!");
-            },
-        });
+const DescricaoTextarea = memo(({ value, onChange, error }: { value: string; onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void; error?: string }) => (
+    <div>
+        <Label htmlFor="descricao">Descrição *</Label>
+        <Textarea
+            id="descricao"
+            name="descricao"
+            value={value}
+            onChange={onChange}
+            placeholder="Descreva detalhadamente o incidente..."
+            rows={5}
+            className={error ? "border-red-500" : ""}
+        />
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+));
 
-        useEffect(() => {
-            if (initialLocation) {
-                setPosition(L.latLng(initialLocation.lat, initialLocation.lng));
-            }
-        }, [initialLocation]);
-
-        return position === null ? null : (
-            <>
-                <Marker position={position}>
-                    <Popup>
-                        Localização selecionada<br />
-                        Lat: {position.lat.toFixed(6)}<br />
-                        Lng: {position.lng.toFixed(6)}
-                    </Popup>
-                </Marker>
-            </>
-        );
-    }
-
-    return (
-        <MapContainer
-            center={mapCenter}
-            zoom={13}
-            style={{ height: "100%", width: "100%" }}
-            scrollWheelZoom={true}
-        >
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <LocationMarker />
-            {userLocation && (
-                <Circle
-                    center={[userLocation.lat, userLocation.lng]}
-                    radius={1000}
-                    pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1 }}
-                />
-            )}
-        </MapContainer>
-    );
-});
-
-MapComponent.displayName = 'MapComponent';
-
-function calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
+DescricaoTextarea.displayName = 'DescricaoTextarea';
 
 const ReportarPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [loadingData, setLoadingData] = useState(true);
-    const [loadingLocation, setLoadingLocation] = useState(true);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [municipioDetectado, setMunicipioDetectado] = useState<MunicipioDetectado | null>(null);
     const [userLocation, setUserLocation] = useState<Position | null>(null);
     const [locationError, setLocationError] = useState<string | null>(null);
+    const [locationLoaded, setLocationLoaded] = useState(false);
     
     // Estado do formulário
     const [title, setTitle] = useState("");
@@ -165,6 +100,8 @@ const ReportarPage = () => {
 
     const isMounted = useRef(true);
     const municipioDetectadoRef = useRef(municipioDetectado);
+    const locationLoadedRef = useRef(false);
+    const categoriasLoadedRef = useRef(false);
 
     useEffect(() => {
         municipioDetectadoRef.current = municipioDetectado;
@@ -176,41 +113,42 @@ const ReportarPage = () => {
         };
     }, []);
 
+    // Carregar dados UMA ÚNICA VEZ
     useEffect(() => {
-        loadInitialData();
-        getCurrentLocation();
+        if (categoriasLoadedRef.current) return;
+        categoriasLoadedRef.current = true;
+        
+        const loadData = async () => {
+            setLoadingData(true);
+            try {
+                const [categoriasRes, municipiosRes] = await Promise.all([
+                    api.get('/categorias'),
+                    api.get('/municipios')
+                ]);
+                
+                const categoriasData = categoriasRes.data.data || categoriasRes.data || [];
+                setCategorias(categoriasData);
+                setMunicipios(municipiosRes.data.data || []);
+                
+            } catch (error) {
+                console.error("Erro ao carregar dados:", error);
+                toast.error("Erro ao carregar dados necessários");
+            } finally {
+                if (isMounted.current) {
+                    setLoadingData(false);
+                }
+            }
+        };
+        
+        loadData();
     }, []);
 
-    const loadInitialData = async () => {
-        setLoadingData(true);
-        try {
-            const [categoriasRes, municipiosRes] = await Promise.all([
-                api.get('/categorias'),
-                api.get('/municipios')
-            ]);
-            
-            const categoriasData = categoriasRes.data.data || categoriasRes.data || [];
-            setCategorias(categoriasData);
-            setMunicipios(municipiosRes.data.data || []);
-            
-        } catch (error) {
-            console.error("Erro ao carregar dados:", error);
-            toast.error("Erro ao carregar dados necessários");
-        } finally {
-            if (isMounted.current) {
-                setLoadingData(false);
-            }
-        }
-    };
-
+    // Função de detecção de município
     const detectarMunicipioPorLocalizacao = useCallback(async (lat: number, lng: number) => {
         try {
-            console.log('Detectando município para:', lat, lng);
             const response = await api.get('/municipios/detect', {
                 params: { latitude: lat, longitude: lng }
             });
-            
-            console.log('Resposta da detecção:', response.data);
             
             if (response.data.success && response.data.data && isMounted.current) {
                 const municipio = response.data.data;
@@ -234,10 +172,14 @@ const ReportarPage = () => {
         }
     }, [municipios]);
 
-    const getCurrentLocation = () => {
+    // Obter localização UMA ÚNICA VEZ
+    const getCurrentLocation = useCallback(() => {
+        if (locationLoadedRef.current) return;
+        locationLoadedRef.current = true;
+        
         if (!navigator.geolocation) {
             setLocationError("Geolocalização não suportada");
-            setLoadingLocation(false);
+            setLocationLoaded(true);
             return;
         }
 
@@ -250,49 +192,49 @@ const ReportarPage = () => {
                     setUserLocation({ lat, lng });
                     setSelectedLat(lat);
                     setSelectedLng(lng);
-                    setLoadingLocation(false);
+                    setLocationLoaded(true);
                     toast.success("Localização capturada!");
+                    
+                    await detectarMunicipioPorLocalizacao(lat, lng);
                 }
-                
-                await detectarMunicipioPorLocalizacao(lat, lng);
             },
             (error) => {
                 console.error("Erro de localização:", error);
                 setLocationError("Não foi possível obter sua localização");
-                setLoadingLocation(false);
+                setLocationLoaded(true);
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
-    };
-
-    const handleLocationSelect = useCallback((lat: number, lng: number) => {
-        setSelectedLat(lat);
-        setSelectedLng(lng);
-        detectarMunicipioPorLocalizacao(lat, lng);
     }, [detectarMunicipioPorLocalizacao]);
 
-    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Iniciar localização APENAS UMA VEZ
+    useEffect(() => {
+        getCurrentLocation();
+    }, [getCurrentLocation]);
+
+    // Quando o usuário seleciona uma nova localização no mapa
+    const handleLocationSelect = useCallback(async (lat: number, lng: number) => {
+        setSelectedLat(lat);
+        setSelectedLng(lng);
+        await detectarMunicipioPorLocalizacao(lat, lng);
+    }, [detectarMunicipioPorLocalizacao]);
+
+    const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setTitle(e.target.value);
-        if (errors.title) {
-            setErrors(prev => ({ ...prev, title: undefined }));
-        }
-    };
+        if (errors.title) setErrors(prev => ({ ...prev, title: undefined }));
+    }, [errors.title]);
 
-    const handleDescricaoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const handleDescricaoChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setDescricao(e.target.value);
-        if (errors.descricao) {
-            setErrors(prev => ({ ...prev, descricao: undefined }));
-        }
-    };
+        if (errors.descricao) setErrors(prev => ({ ...prev, descricao: undefined }));
+    }, [errors.descricao]);
 
-    const handleCategoriaChange = (value: string) => {
+    const handleCategoriaChange = useCallback((value: string) => {
         setCategoriaId(value);
-        if (errors.categoria_id) {
-            setErrors(prev => ({ ...prev, categoria_id: undefined }));
-        }
-    };
+        if (errors.categoria_id) setErrors(prev => ({ ...prev, categoria_id: undefined }));
+    }, [errors.categoria_id]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
         const newFiles: FileUpload[] = selectedFiles.map(file => ({
             file,
@@ -302,12 +244,12 @@ const ReportarPage = () => {
                   file.type.startsWith('audio/') ? 'audio' : 'documento'
         }));
         setFiles(prev => [...prev, ...newFiles]);
-    };
+    }, []);
 
-    const removeFile = (index: number) => {
+    const removeFile = useCallback((index: number) => {
         URL.revokeObjectURL(files[index].preview);
         setFiles(prev => prev.filter((_, i) => i !== index));
-    };
+    }, [files]);
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
@@ -331,7 +273,15 @@ const ReportarPage = () => {
         }
 
         if (userLocation && selectedLat && selectedLng) {
-            const distancia = calcularDistancia(userLocation.lat, userLocation.lng, selectedLat, selectedLng);
+            const R = 6371;
+            const dLat = (selectedLat - userLocation.lat) * Math.PI / 180;
+            const dLon = (selectedLng - userLocation.lng) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(selectedLat * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distancia = R * c;
+            
             if (distancia > 1) {
                 toast.error(`Localização inválida! Distância de ${distancia.toFixed(2)}km (limite 1km)`);
                 return;
@@ -420,7 +370,7 @@ const ReportarPage = () => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {loadingLocation ? (
+                            {!locationLoaded ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
                                     <span>Obtendo localização...</span>
@@ -458,10 +408,12 @@ const ReportarPage = () => {
                                     )}
                                     
                                     <div className="h-96 rounded-lg overflow-hidden border">
-                                        <MapComponent 
-                                            userLocation={userLocation}
+                                        <IncidentMap 
+                                            userLat={userLocation.lat}
+                                            userLng={userLocation.lng}
+                                            initialLat={selectedLat}
+                                            initialLng={selectedLng}
                                             onLocationSelect={handleLocationSelect}
-                                            initialLocation={selectedLat && selectedLng ? { lat: selectedLat, lng: selectedLng } : null}
                                         />
                                     </div>
                                     
@@ -493,30 +445,17 @@ const ReportarPage = () => {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="title">Título *</Label>
-                                        <Input
-                                            id="title"
-                                            value={title}
-                                            onChange={handleTitleChange}
-                                            placeholder="Ex: Inundação no bairro X"
-                                            className={errors.title ? "border-red-500" : ""}
-                                        />
-                                        {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
-                                    </div>
+                                    <TitleInput 
+                                        value={title} 
+                                        onChange={handleTitleChange} 
+                                        error={errors.title} 
+                                    />
 
-                                    <div>
-                                        <Label htmlFor="descricao">Descrição *</Label>
-                                        <Textarea
-                                            id="descricao"
-                                            value={descricao}
-                                            onChange={handleDescricaoChange}
-                                            placeholder="Descreva detalhadamente o incidente..."
-                                            rows={5}
-                                            className={errors.descricao ? "border-red-500" : ""}
-                                        />
-                                        {errors.descricao && <p className="text-xs text-red-500 mt-1">{errors.descricao}</p>}
-                                    </div>
+                                    <DescricaoTextarea 
+                                        value={descricao} 
+                                        onChange={handleDescricaoChange} 
+                                        error={errors.descricao} 
+                                    />
 
                                     <div>
                                         <Label htmlFor="categoria">Categoria *</Label>

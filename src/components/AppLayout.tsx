@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef, useCallback } from 'react';
 import { AppSidebar } from './AppSidebar';
 import { SoundAlertToggle } from '@/components/SoundAlertToggle';
 import { AccessibilityMenu } from '@/components/AccessibilityMenu';
@@ -10,11 +10,15 @@ function AppLayoutContent({ children }: { children: ReactNode }) {
     const { announce } = useLiveAnnouncer();
     const location = useLocation();
     const mainContentRef = useRef<HTMLDivElement>(null);
+    const lastAnnouncedPath = useRef<string>('');
 
-    // Announce page changes to screen readers
+    // Announce page changes to screen readers - APENAS quando a rota muda de verdade
     useEffect(() => {
-        const pageTitle = document.title || 'SIGEM';
-        announce(`Navegou para: ${pageTitle}`);
+        if (lastAnnouncedPath.current !== location.pathname) {
+            lastAnnouncedPath.current = location.pathname;
+            const pageTitle = document.title || 'SIGEM';
+            announce(`Navegou para: ${pageTitle}`);
+        }
         
         // Focus main content on route change
         if (mainContentRef.current) {
