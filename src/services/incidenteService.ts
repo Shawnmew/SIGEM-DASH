@@ -53,13 +53,21 @@ export interface IncidentesResponse {
 export const incidenteService = {
     /**
      * Buscar todos os incidentes sem limite de paginação
+     * NOTA: A rota /incidentes usa paginação do Laravel. Usamos per_page=500.
      */
     async getAllIncidentes(): Promise<Incidente[]> {
         try {
-            // Buscar todos os incidentes de uma vez (sem paginação)
-            const response = await api.get('/incidentes/all');
+            const response = await api.get('/incidentes', { params: { per_page: 500 } });
             if (response.data.success) {
-                return response.data.data;
+                const data = response.data.data;
+                // Resposta paginada do Laravel: { data: [...], current_page, ... }
+                if (data && Array.isArray(data.data)) {
+                    return data.data;
+                }
+                // Resposta simples (array directo)
+                if (Array.isArray(data)) {
+                    return data;
+                }
             }
             return [];
         } catch (error) {

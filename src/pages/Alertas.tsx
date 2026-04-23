@@ -197,17 +197,51 @@ const AlertasPage = () => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [activeTab, setActiveTab] = useState<string>("meus");
 
+    // Diagnóstico de mobilizações
+    const [diagnostico, setDiagnostico] = useState<any>(null);
+    const [mobilizando, setMobilizando] = useState<number | null>(null);
+
     // Carregar meus alertas
     const loadMeusAlertas = async () => {
         setMeusAlertasLoading(true);
         try {
             const response = await api.get('/user/alertas');
-            let alertasData = [];
-            if (response.data.success && response.data.data) {
-                alertasData = response.data.data;
-            } else if (response.data.data) {
-                alertasData = response.data.data;
+            let alertasData: AlertaUsuario[] = [];
+
+            if (response.data.success) {
+                // AlertaResource retorna Alerta com pivot, dentro de paginação
+                // response.data.data pode ser { data: [...] } (paginado) ou [...] (array)
+                let raw: any[] = [];
+                const dataField = response.data.data;
+                if (Array.isArray(dataField)) {
+                    raw = dataField;
+                } else if (dataField && Array.isArray(dataField.data)) {
+                    raw = dataField.data;
+                }
+
+                // Mapear do formato AlertaResource para AlertaUsuario
+                alertasData = raw.map((item: any) => ({
+                    id: item.id,
+                    alerta_id: item.id,
+                    lido: item.pivot?.lido ?? false,
+                    resposta: item.pivot?.resposta ?? 'pendente',
+                    created_at: item.created_at,
+                    alerta: {
+                        id: item.id,
+                        incidente_id: item.incidente_id,
+                        tipo: item.tipo,
+                        prioridade: item.prioridade ?? 'media',
+                        mensagem: item.mensagem,
+                        data_envio: item.data_envio ?? item.created_at,
+                        expira_em: item.expira_em,
+                        incidente: item.incidente ? {
+                            id: item.incidente.id,
+                            title: item.incidente.title,
+                        } : undefined,
+                    },
+                }));
             }
+
             setMeusAlertas(alertasData);
             setUnreadCount(alertasData.filter((a: AlertaUsuario) => !a.lido).length);
         } catch (error) {
@@ -243,10 +277,42 @@ const AlertasPage = () => {
         }
     };
 
+    // Carregar diagnóstico quando não há dados de monitoramento
+    const loadDiagnostico = async () => {
+        try {
+            const response = await api.get('/admin/monitoramento-alertas/diagnostico');
+            if (response.data.success) {
+                setDiagnostico(response.data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar diagnóstico:', error);
+        }
+    };
+
+    // Mobilizar incidente manualmente
+    const mobilizarIncidente = async (incidenteId: number) => {
+        setMobilizando(incidenteId);
+        try {
+            const response = await api.post(`/admin/mobilizar-incidente/${incidenteId}`);
+            if (response.data.success) {
+                toast.success(response.data.message || 'Mobilização acionada com sucesso!');
+                await loadMonitoramentoAlertas();
+                await loadDiagnostico();
+            } else {
+                toast.warning(response.data.message || 'Não foi possível mobilizar.');
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Erro ao mobilizar incidente');
+        } finally {
+            setMobilizando(null);
+        }
+    };
+
     // Marcar alerta como lido
     const marcarComoLido = async (alertaId: number) => {
         try {
-            await api.patch(`/alertas/${alertaId}/read`);
+            // Rota correcta: PATCH /user/alertas/{id}/lido
+            await api.patch(`/user/alertas/${alertaId}/lido`);
             setMeusAlertas(meusAlertas.map(a => 
                 a.alerta_id === alertaId ? { ...a, lido: true } : a
             ));
@@ -261,7 +327,8 @@ const AlertasPage = () => {
     // Marcar todos como lidos
     const marcarTodosComoLidos = async () => {
         try {
-            await api.patch('/alertas/read-all');
+            // Rota correcta: PATCH /user/alertas/lidos
+            await api.patch('/user/alertas/lidos');
             setMeusAlertas(meusAlertas.map(a => ({ ...a, lido: true })));
             setUnreadCount(0);
             toast.success("Todos os alertas marcados como lidos");
@@ -280,6 +347,18 @@ const AlertasPage = () => {
             loadMonitoramentoAlertas();
         }
     }, [activeTab, page, statusFilter, prioridadeFilter, incidenteFilter, municipioFilter, entidadeFilter]);
+
+    // Carregar diagnóstico quando monitoramento estiver vazio
+    useEffect(() => {
+        if (
+            activeTab === "monitoramento" &&
+            isAdmin &&
+            !monitoramentoLoading &&
+            monitoramentoAlertas.length === 0
+        ) {
+            loadDiagnostico();
+        }
+    }, [activeTab, monitoramentoLoading, monitoramentoAlertas.length]);
 
     const getTimeAgo = (date: string) => {
         const diff = Date.now() - new Date(date).getTime();
@@ -618,10 +697,74 @@ const AlertasPage = () => {
                                 </div>
                             ) : monitoramentoAlertas.length === 0 ? (
                                 <Card>
-                                    <CardContent className="py-12 text-center text-muted-foreground">
-                                        <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                                        <p>Nenhuma mobilização encontrada</p>
-                                        <p className="text-sm mt-1">Todos os voluntários já responderam aos alertas.</p>
+                                    <CardContent className="py-8">
+                                        <div className="text-center text-muted-foreground mb-4">
+                                            <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                                            <p className="font-medium">Nenhuma mobilização encontrada</p>
+                                        </div>
+
+                                        {/* Diagnóstico */}
+                                        {diagnostico && (
+                                            <div className="mt-4 space-y-4">
+                                                {/* Contagens */}
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                    {[
+                                                        { label: 'Registos alertas_user', value: diagnostico.totais?.alertas_user ?? 0, color: 'text-blue-600' },
+                                                        { label: 'Voluntários activos', value: diagnostico.totais?.voluntarios ?? 0, color: 'text-green-600' },
+                                                        { label: 'Entidades activas', value: diagnostico.totais?.entidades ?? 0, color: 'text-purple-600' },
+                                                        { label: 'Incidentes totais', value: diagnostico.totais?.incidentes ?? 0, color: 'text-orange-600' },
+                                                    ].map(item => (
+                                                        <div key={item.label} className="bg-muted rounded-lg p-3 text-center">
+                                                            <p className={`text-2xl font-bold ${item.color}`}>{item.value}</p>
+                                                            <p className="text-xs text-muted-foreground mt-1">{item.label}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Mensagem de diagnóstico */}
+                                                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                                                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                                                        ⚠️ {diagnostico.diagnostico}
+                                                    </p>
+                                                </div>
+
+                                                {/* Incidentes sem mobilização */}
+                                                {diagnostico.incidentes_sem_mobilizacao?.length > 0 && (
+                                                    <div>
+                                                        <p className="text-sm font-medium mb-2">Incidentes sem mobilização ({diagnostico.incidentes_sem_mobilizacao.length}):</p>
+                                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                            {diagnostico.incidentes_sem_mobilizacao.map((inc: any) => (
+                                                                <div key={inc.id} className="flex items-center justify-between bg-muted rounded-lg px-3 py-2">
+                                                                    <div>
+                                                                        <p className="text-sm font-medium truncate max-w-xs">{inc.title}</p>
+                                                                        <p className="text-xs text-muted-foreground">Status: {inc.status}</p>
+                                                                    </div>
+                                                                    {diagnostico.totais?.voluntarios > 0 || diagnostico.totais?.entidades > 0 ? (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            onClick={() => mobilizarIncidente(inc.id)}
+                                                                            disabled={mobilizando === inc.id}
+                                                                            className="ml-2 shrink-0"
+                                                                        >
+                                                                            {mobilizando === inc.id ? (
+                                                                                <span className="flex items-center gap-1">
+                                                                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                                                    A mobilizar...
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span>Mobilizar</span>
+                                                                            )}
+                                                                        </Button>
+                                                                    ) : (
+                                                                        <span className="text-xs text-muted-foreground ml-2">Sem voluntários</span>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             ) : (
