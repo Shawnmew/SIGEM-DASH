@@ -57,7 +57,7 @@ export const incidenteService = {
      */
     async getAllIncidentes(): Promise<Incidente[]> {
         try {
-            const response = await api.get('/incidentes', { params: { per_page: 500 } });
+            const response = await api.get('/incidentes', { params: { per_page: 1000 } });
             if (response.data.success) {
                 const data = response.data.data;
                 // Resposta paginada do Laravel: { data: [...], current_page, ... }

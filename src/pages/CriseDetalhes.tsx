@@ -91,6 +91,28 @@ interface Incidente {
     };
     midias: Midia[];
     voluntarios: Voluntario[];
+    alertas?: {
+        id: number;
+        tipo: string;
+        mensagem: string;
+        usuarios: {
+            id: number;
+            nome: string;
+            sobrenome: string;
+            telefone: string;
+            email: string;
+            pivot: {
+                lido: boolean;
+                resposta: string;
+                resposta_em?: string;
+                justificativa_recusa?: string;
+            };
+            voluntario?: {
+                id: number;
+                municipio?: { nome: string };
+            };
+        }[];
+    }[];
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: JSX.Element }> = {
@@ -427,58 +449,115 @@ const CriseDetalhesPage = () => {
                     </TabsContent>
 
                     <TabsContent value="voluntarios">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Voluntários Mobilizados</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {incidente.voluntarios && incidente.voluntarios.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {incidente.voluntarios.map((voluntario) => (
-                                            <div key={voluntario.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                        <User className="h-5 w-5 text-primary" />
+                        <div className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Voluntários Mobilizados (No Local)</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {incidente.voluntarios && incidente.voluntarios.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {incidente.voluntarios.map((voluntario) => (
+                                                <div key={voluntario.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                                            <User className="h-5 w-5 text-primary" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium">
+                                                                {voluntario.user?.nome} {voluntario.user?.sobrenome}
+                                                            </p>
+                                                            <div className="flex items-center gap-3 mt-1">
+                                                                {voluntario.user?.telefone && (
+                                                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                        <Phone className="h-3 w-3" />
+                                                                        {voluntario.user.telefone}
+                                                                    </p>
+                                                                )}
+                                                                {voluntario.user?.email && (
+                                                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                        <Mail className="h-3 w-3" />
+                                                                        {voluntario.user.email}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="font-medium">
-                                                            {voluntario.user?.nome} {voluntario.user?.sobrenome}
+                                                    <div className="text-right">
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {voluntario.papel === 'lider' ? 'Líder' : voluntario.papel === 'apoio' ? 'Apoio' : voluntario.papel}
+                                                        </Badge>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {new Date(voluntario.data_ocorrencia).toLocaleDateString("pt-AO")}
                                                         </p>
-                                                        <div className="flex items-center gap-3 mt-1">
-                                                            {voluntario.user?.telefone && (
-                                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                    <Phone className="h-3 w-3" />
-                                                                    {voluntario.user.telefone}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6">
+                                            <User className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-20" />
+                                            <p className="text-muted-foreground">Nenhum voluntário chegou ao local ainda.</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Voluntários Notificados (Alertados)</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {incidente.alertas && incidente.alertas.length > 0 && incidente.alertas.some(a => a.usuarios && a.usuarios.length > 0) ? (
+                                        <div className="space-y-3">
+                                            {incidente.alertas.flatMap(alerta => 
+                                                alerta.usuarios?.map((user) => (
+                                                    <div key={`${alerta.id}-${user.id}`} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                                                                <User className="h-5 w-5 text-muted-foreground" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium">
+                                                                    {user.nome} {user.sobrenome}
                                                                 </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {user.voluntario?.municipio?.nome || 'Município não especificado'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            {user.pivot.resposta === 'aceito' && (
+                                                                <Badge className="bg-green-100 text-green-800 border-green-200">Aceitou</Badge>
                                                             )}
-                                                            {voluntario.user?.email && (
-                                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                    <Mail className="h-3 w-3" />
-                                                                    {voluntario.user.email}
+                                                            {user.pivot.resposta === 'recusado' && (
+                                                                <Badge className="bg-red-100 text-red-800 border-red-200">Recusou</Badge>
+                                                            )}
+                                                            {user.pivot.resposta === 'pendente' && (
+                                                                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendente</Badge>
+                                                            )}
+                                                            {!['aceito', 'recusado', 'pendente'].includes(user.pivot.resposta) && (
+                                                                <Badge variant="outline">{user.pivot.resposta}</Badge>
+                                                            )}
+                                                            {user.pivot.lido && (
+                                                                <p className="text-[10px] text-muted-foreground mt-1 flex items-center justify-end gap-1">
+                                                                    <CheckCircle className="h-3 w-3" /> Visualizado
                                                                 </p>
                                                             )}
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {voluntario.papel === 'lider' ? 'Líder' : voluntario.papel === 'apoio' ? 'Apoio' : voluntario.papel}
-                                                    </Badge>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        {new Date(voluntario.data_ocorrencia).toLocaleDateString("pt-AO")}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <User className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                                        <p className="text-muted-foreground">Nenhum voluntário mobilizado para este incidente</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                                ))
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6">
+                                            <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-20" />
+                                            <p className="text-muted-foreground">Nenhum alerta enviado ou nenhum voluntário notificado.</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="mapa">

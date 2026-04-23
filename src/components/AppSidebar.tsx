@@ -143,7 +143,6 @@ export function AppSidebar() {
                     : navLinkInactiveClass
                 } ${collapsed ? "justify-center" : ""}`
               }
-              aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
             >
               <item.icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
               {!collapsed && <span>{item.title}</span>}
