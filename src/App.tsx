@@ -1,3 +1,4 @@
+// src/App.tsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -17,6 +18,7 @@ import Crises from "./pages/Crises";
 import Relatorios from "./pages/Relatorios";
 import CriseDetalhes from "./pages/CriseDetalhes";
 import LogsAuditoria from "./pages/LogsAuditoria";
+import TodasCrises from "./pages/TodasCrises";
 
 function App() {
   return (
@@ -66,6 +68,11 @@ function App() {
           <Route path="/logs-auditoria" element={
             <ProtectedRoute requireAdmin>
               <LogsAuditoria />
+            </ProtectedRoute>
+          } />
+          <Route path="/todas-crises" element={
+            <ProtectedRoute>
+              <TodasCrises />
             </ProtectedRoute>
           } />
 

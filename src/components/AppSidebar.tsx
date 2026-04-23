@@ -19,7 +19,7 @@ import {
   Activity,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { useAuth } from "@/contexts/authcontext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const adminNavItems = [
@@ -27,6 +27,7 @@ const adminNavItems = [
   { title: "Usuários", icon: Shield, path: "/usuarios" },
   { title: "Entidades", icon: FileText, path: "/entidades" },
   { title: "Crises Ativas", icon: AlertTriangle, path: "/crises" },
+  { title: "Todas Crises", icon: AlertTriangle, path: "/todas-crises" },
   { title: "Reportar", icon: Plus, path: "/reportar" },
   { title: "Mapa de Risco", icon: MapPin, path: "/mapa" },
   { title: "Voluntários", icon: Users, path: "/voluntarios" },
@@ -38,6 +39,7 @@ const adminNavItems = [
 const entidadeNavItems = [
   { title: "Painel", icon: LayoutDashboard, path: "/" },
   { title: "Crises Ativas", icon: AlertTriangle, path: "/crises" },
+  { title: "Todas Crises", icon: AlertTriangle, path: "/todas-crises" },
   { title: "Reportar", icon: Plus, path: "/reportar" },
   { title: "Mapa de Risco", icon: MapPin, path: "/mapa" },
   { title: "Voluntários", icon: Users, path: "/voluntarios" },
