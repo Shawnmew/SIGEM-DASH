@@ -13,6 +13,11 @@ interface User {
     user_type: 'admin' | 'entidade';
 }
 
+export interface SavedProfile {
+    token: string;
+    user: User;
+}
+
 interface AuthContextType {
     user: User | null;
     loading: boolean;
@@ -21,6 +26,10 @@ interface AuthContextType {
     isAdmin: boolean;
     isEntidade: boolean;
     isAuthenticated: boolean;
+    savedProfiles: SavedProfile[];
+    switchProfile: (email: string) => Promise<boolean>;
+    removeProfile: (email: string) => void;
+    addProfile: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,6 +45,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
 
     const isAdmin = user?.user_type === 'admin' && user?.tipo === 'admin';
     const isEntidade = user?.user_type === 'entidade';
@@ -80,7 +90,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const loadSavedProfiles = () => {
+        try {
+            const profilesStr = localStorage.getItem('saved_profiles');
+            if (profilesStr) {
+                setSavedProfiles(JSON.parse(profilesStr));
+            }
+        } catch (e) {
+            console.error("Erro ao carregar perfis salvos", e);
+        }
+    };
+
+    const saveProfileToStorage = (token: string, userData: User) => {
+        try {
+            const profilesStr = localStorage.getItem('saved_profiles');
+            let profiles: SavedProfile[] = profilesStr ? JSON.parse(profilesStr) : [];
+            
+            // Remove if already exists to update
+            profiles = profiles.filter(p => p.user.email !== userData.email);
+            
+            profiles.push({ token, user: userData });
+            localStorage.setItem('saved_profiles', JSON.stringify(profiles));
+            setSavedProfiles(profiles);
+        } catch (e) {
+            console.error("Erro ao salvar perfil", e);
+        }
+    };
+
     useEffect(() => {
+        loadSavedProfiles();
         loadUser();
     }, []);
 
@@ -103,10 +141,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 
                 localStorage.setItem('token', token);
                 
-                setUser({
+                const finalUser = {
                     ...userData,
                     user_type: user_type
-                });
+                };
+                
+                setUser(finalUser);
+                saveProfileToStorage(token, finalUser);
                 
                 toast.success(`Bem-vindo, ${userData.nome}!`);
                 return true;
@@ -132,13 +173,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error('Erro ao fazer logout:', error);
         } finally {
             localStorage.removeItem('token');
+            localStorage.removeItem('saved_profiles');
             setUser(null);
+            setSavedProfiles([]);
             toast.success('Logout realizado com sucesso');
         }
     };
 
+    const switchProfile = async (email: string): Promise<boolean> => {
+        const profile = savedProfiles.find(p => p.user.email === email);
+        if (profile) {
+            localStorage.setItem('token', profile.token);
+            setUser(profile.user);
+            api.defaults.headers.common['Authorization'] = `Bearer ${profile.token}`;
+            window.location.href = '/';
+            return true;
+        }
+        return false;
+    };
+
+    const removeProfile = (email: string) => {
+        const newProfiles = savedProfiles.filter(p => p.user.email !== email);
+        localStorage.setItem('saved_profiles', JSON.stringify(newProfiles));
+        setSavedProfiles(newProfiles);
+    };
+
+    const addProfile = () => {
+        localStorage.removeItem('token');
+        setUser(null);
+        window.location.href = '/login';
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, signIn, signOut, isAdmin, isEntidade, isAuthenticated }}>
+        <AuthContext.Provider value={{ 
+            user, loading, signIn, signOut, isAdmin, isEntidade, isAuthenticated, 
+            savedProfiles, switchProfile, removeProfile, addProfile 
+        }}>
             {children}
         </AuthContext.Provider>
     );

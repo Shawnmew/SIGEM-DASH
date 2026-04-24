@@ -6,11 +6,18 @@ import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, savedProfiles, switchProfile } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [switching, setSwitching] = useState<string | null>(null);
+
+  const handleSwitchProfile = async (profileEmail: string) => {
+    setSwitching(profileEmail);
+    await switchProfile(profileEmail);
+    setSwitching(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +66,49 @@ const LoginPage = () => {
                 <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 {error}
               </div>
+            )}
+            
+            {savedProfiles && savedProfiles.length > 0 && (
+                <div className="mb-6 space-y-3">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Entrar com uma conta salva:
+                  </label>
+                  {savedProfiles.map((p) => (
+                    <div 
+                      key={p.user.email} 
+                      onClick={() => !switching && handleSwitchProfile(p.user.email)}
+                      className={`flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${switching === p.user.email ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center font-bold">
+                          {p.user.nome.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {p.user.nome} {p.user.sobrenome}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{p.user.email}</p>
+                        </div>
+                      </div>
+                      {switching === p.user.email ? (
+                          <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                          <div className="text-gray-400">&rarr;</div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <div className="relative py-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className="bg-white dark:bg-gray-800 px-2 text-xs text-gray-500 dark:text-gray-400">
+                        Ou entre com outra conta
+                      </span>
+                    </div>
+                  </div>
+                </div>
             )}
             
             <div>

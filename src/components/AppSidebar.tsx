@@ -50,7 +50,8 @@ const entidadeNavItems = [
 export function AppSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const { signOut, user, isAdmin, isEntidade } = useAuth();
+  const [showAccounts, setShowAccounts] = useState(false);
+  const { signOut, user, isAdmin, isEntidade, savedProfiles, switchProfile, addProfile } = useAuth();
   const { theme, sidebarTheme, toggleTheme } = useTheme();
 
   const navItems = isAdmin ? adminNavItems : entidadeNavItems;
@@ -153,12 +154,46 @@ export function AppSidebar() {
         {/* Footer */}
         <div className={`border-t ${sidebarBorderClass} p-2 space-y-1`}>
           {!collapsed && user && (
-            <div className="px-2.5 py-1" aria-label="Informações do usuário">
-              <p className={`text-[10px] ${userEmailClass} truncate`}>{user.email}</p>
-              <p className={`text-[9px] ${userRoleClass} mt-0.5`}>
-                {isAdmin ? 'Administrador' : isEntidade ? 'Entidade Promotora' : 'Usuário'}
-              </p>
+            <div 
+              className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${showAccounts ? 'bg-black/5 dark:bg-white/5' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+              onClick={() => setShowAccounts(!showAccounts)}
+              aria-label="Informações do usuário"
+            >
+              <div className="flex justify-between items-center">
+                  <div>
+                    <p className={`text-[10px] ${userEmailClass} truncate max-w-[140px]`}>{user.email}</p>
+                    <p className={`text-[9px] ${userRoleClass} mt-0.5`}>
+                        {isAdmin ? 'Administrador' : isEntidade ? 'Entidade Promotora' : 'Usuário'}
+                    </p>
+                  </div>
+                  <Users className="h-3.5 w-3.5 text-gray-400" />
+              </div>
             </div>
+          )}
+
+          {!collapsed && showAccounts && (
+              <div className="pl-3 pr-1 py-1 space-y-1 bg-black/5 dark:bg-white/5 rounded-lg mb-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1 pl-1">Alternar Conta</p>
+                  {savedProfiles.map(p => (
+                      <button
+                          key={p.user.email}
+                          onClick={() => switchProfile(p.user.email)}
+                          className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md text-[11px] ${p.user.email === user?.email ? 'bg-primary/10 text-primary font-medium' : navLinkInactiveClass}`}
+                      >
+                          <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[8px] font-bold overflow-hidden">
+                              {p.user.nome.charAt(0)}
+                          </div>
+                          <span className="truncate">{p.user.email}</span>
+                      </button>
+                  ))}
+                  <button
+                      onClick={addProfile}
+                      className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md text-[11px] ${navLinkInactiveClass}`}
+                  >
+                      <Plus className="h-3 w-3" />
+                      <span>Adicionar conta</span>
+                  </button>
+              </div>
           )}
           
           {/* Theme Toggle Button */}

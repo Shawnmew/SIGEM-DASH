@@ -21,7 +21,8 @@ import {
   X,
   Play,
   Download,
-  ZoomIn
+  ZoomIn,
+  Headphones
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -427,6 +428,15 @@ const CriseDetalhesPage = () => {
                                                         </div>
                                                     </div>
                                                 )}
+                                                {midia.tipo_midia === 'audio' && (
+                                                    <div className="relative overflow-hidden rounded-lg bg-orange-50 border border-orange-200 aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-orange-100 transition-colors">
+                                                        <Headphones className="h-12 w-12 text-orange-500" />
+                                                        <span className="text-xs text-orange-700 mt-2">Áudio</span>
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <Play className="h-8 w-8 text-white" />
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {midia.tipo_midia === 'documento' && (
                                                     <div className="relative overflow-hidden rounded-lg bg-gray-100 aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
                                                         <FileText className="h-12 w-12 text-gray-500" />
@@ -438,7 +448,7 @@ const CriseDetalhesPage = () => {
                                                 )}
                                                 <div className="absolute top-2 right-2">
                                                     <Badge variant="secondary" className="text-xs">
-                                                        {midia.tipo_midia === 'foto' ? 'Foto' : midia.tipo_midia === 'video' ? 'Vídeo' : 'Documento'}
+                                                        {midia.tipo_midia === 'foto' ? 'Foto' : midia.tipo_midia === 'video' ? 'Vídeo' : midia.tipo_midia === 'audio' ? 'Áudio' : 'Documento'}
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -631,14 +641,28 @@ const CriseDetalhesPage = () => {
                                 />
                             )}
                             {selectedMedia.tipo_midia === 'video' && (
-                                <video
-                                    src={getMediaUrl(selectedMedia.url)}
-                                    controls
-                                    autoPlay
-                                    className="max-w-full max-h-[85vh]"
-                                >
-                                    Seu navegador não suporta vídeos.
-                                </video>
+                                                <video
+                                                    src={getMediaUrl(selectedMedia.url)}
+                                                    controls
+                                                    autoPlay
+                                                    className="max-w-full max-h-[85vh]"
+                                                >
+                                                    Seu navegador não suporta vídeos.
+                                                </video>
+                            )}
+                            {selectedMedia.tipo_midia === 'audio' && (
+                                <div className="text-center p-8 w-full max-w-md bg-white rounded-xl">
+                                    <Headphones className="h-24 w-24 text-orange-500 mx-auto mb-6" />
+                                    <h3 className="text-lg font-medium mb-6 text-gray-800">Reprodução de Áudio</h3>
+                                    <audio
+                                        src={getMediaUrl(selectedMedia.url)}
+                                        controls
+                                        autoPlay
+                                        className="w-full"
+                                    >
+                                        Seu navegador não suporta a reprodução de áudio.
+                                    </audio>
+                                </div>
                             )}
                             {selectedMedia.tipo_midia === 'documento' && (
                                 <div className="text-center p-8">
