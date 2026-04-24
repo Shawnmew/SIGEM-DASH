@@ -38,13 +38,23 @@ export interface RegionImpact {
 }
 
 export const dashboardService = {
-    async getStats(): Promise<DashboardStats> {
-        const response = await api.get('/dashboard/stats');
+    async getStats(provinciaId?: string, municipioId?: string): Promise<DashboardStats> {
+        const response = await api.get('/dashboard/stats', {
+            params: {
+                provincia_id: provinciaId !== 'all' ? provinciaId : undefined,
+                municipio_id: municipioId !== 'all' ? municipioId : undefined
+            }
+        });
         return response.data.data;
     },
 
-    async getChartData(): Promise<ChartData> {
-        const response = await api.get('/dashboard/charts');
+    async getChartData(provinciaId?: string, municipioId?: string): Promise<ChartData> {
+        const response = await api.get('/dashboard/charts', {
+            params: {
+                provincia_id: provinciaId !== 'all' ? provinciaId : undefined,
+                municipio_id: municipioId !== 'all' ? municipioId : undefined
+            }
+        });
         return response.data.data;
     },
 

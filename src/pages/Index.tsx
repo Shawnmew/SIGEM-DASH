@@ -17,14 +17,13 @@ import { StatCard } from "@/components/StatCard";
 import { CrisisBarChart } from "@/components/CrisisBarChart";
 import { CrisisPieChart } from "@/components/CrisisPieChart";
 import { AffectedLineChart } from "@/components/AffectedLineChart";
-import { VideoGrid } from "@/components/VideoGrid";
-import { RecentAlerts } from "@/components/RecentAlerts";
-import { RegionOverview } from "@/components/RegionOverview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { dashboardService, DashboardStats, ChartData } from "@/services/dashboardService";
+import api from "@/lib/api";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -49,20 +48,58 @@ const Dashboard = () => {
     });
     
     const [loading, setLoading] = useState(true);
+    
+    // Filtros de localização
+    const [provincias, setProvincias] = useState<any[]>([]);
+    const [municipios, setMunicipios] = useState<any[]>([]);
+    const [selectedProvincia, setSelectedProvincia] = useState<string>("all");
+    const [selectedMunicipio, setSelectedMunicipio] = useState<string>("all");
+
+    // Carregar províncias
+    useEffect(() => {
+        const loadProvincias = async () => {
+            try {
+                const response = await api.get('/provincias');
+                setProvincias(response.data.data || []);
+            } catch (error) {
+                console.error("Erro ao carregar províncias:", error);
+            }
+        };
+        loadProvincias();
+    }, []);
+
+    // Carregar municípios quando a província muda
+    useEffect(() => {
+        const loadMunicipios = async () => {
+            if (selectedProvincia === "all") {
+                setMunicipios([]);
+                setSelectedMunicipio("all");
+                return;
+            }
+            
+            try {
+                const response = await api.get(`/municipios?provincia_id=${selectedProvincia}`);
+                setMunicipios(response.data.data || []);
+            } catch (error) {
+                console.error("Erro ao carregar municípios:", error);
+            }
+        };
+        loadMunicipios();
+    }, [selectedProvincia]);
 
     useEffect(() => {
         if (!authLoading && user) {
             loadDashboardData();
         }
-    }, [authLoading, user]);
+    }, [authLoading, user, selectedProvincia, selectedMunicipio]);
 
     const loadDashboardData = async () => {
         setLoading(true);
         try {
             // Carregar estatísticas e dados dos gráficos em paralelo
             const [statsData, chartData] = await Promise.all([
-                dashboardService.getStats(),
-                dashboardService.getChartData()
+                dashboardService.getStats(selectedProvincia, selectedMunicipio),
+                dashboardService.getChartData(selectedProvincia, selectedMunicipio)
             ]);
             
             setStats(statsData);
@@ -104,7 +141,7 @@ const Dashboard = () => {
     return (
         <AppLayout>
             {/* Header */}
-            <div className="mb-8 pl-12 lg:pl-0 flex items-end justify-between">
+            <div className="mb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
                 <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">
                         Visão Geral
@@ -117,10 +154,41 @@ const Dashboard = () => {
                         {isEntidade && "(Entidade Promotora)"}
                     </p>
                 </div>
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/crises")}>
-                    <History className="h-4 w-4" />
-                    Ver todas as crises
-                </Button>
+                
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    <Select value={selectedProvincia} onValueChange={setSelectedProvincia}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Todas Províncias" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas Províncias</SelectItem>
+                            {provincias.map((prov) => (
+                                <SelectItem key={prov.id} value={String(prov.id)}>
+                                    {prov.nome}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    
+                    <Select value={selectedMunicipio} onValueChange={setSelectedMunicipio} disabled={selectedProvincia === "all"}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Todos Municípios" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos Municípios</SelectItem>
+                            {municipios.map((mun) => (
+                                <SelectItem key={mun.id} value={String(mun.id)}>
+                                    {mun.nome}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Button variant="outline" size="default" className="gap-2" onClick={() => navigate("/crises")}>
+                        <History className="h-4 w-4" />
+                        Crises
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -207,18 +275,6 @@ const Dashboard = () => {
                 <AffectedLineChart chartData={chartData.by_month} />
             </div>
 
-            {/* Bottom: Impacto por Região, Vídeos e Alertas */}
-            <div className="grid lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-3">
-                    <RegionOverview />
-                </div>
-                <div className="lg:col-span-6">
-                    <VideoGrid />
-                </div>
-                <div className="lg:col-span-3">
-                    <RecentAlerts />
-                </div>
-            </div>
         </AppLayout>
     );
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import api from "@/lib/api";
+import api, { SERVER_URL } from "@/lib/api";
 import { toast } from "sonner";
 import { 
   ArrowLeft, 
@@ -219,6 +219,12 @@ const CriseDetalhesPage = () => {
         setSelectedMedia(null);
     };
 
+    const getMediaUrl = (url: string) => {
+        if (!url) return "";
+        if (url.startsWith('http')) return url;
+        return `${SERVER_URL}${url}`;
+    };
+
     if (loading) {
         return (
             <AppLayout>
@@ -400,7 +406,7 @@ const CriseDetalhesPage = () => {
                                                 {midia.tipo_midia === 'foto' && (
                                                     <div className="relative overflow-hidden rounded-lg bg-gray-100 aspect-square">
                                                         <img
-                                                            src={midia.url}
+                                                            src={getMediaUrl(midia.url)}
                                                             alt="Mídia do incidente"
                                                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
                                                             onError={(e) => {
@@ -616,7 +622,7 @@ const CriseDetalhesPage = () => {
                         <div className="flex items-center justify-center w-full h-full min-h-[60vh]">
                             {selectedMedia.tipo_midia === 'foto' && (
                                 <img
-                                    src={selectedMedia.url}
+                                    src={getMediaUrl(selectedMedia.url)}
                                     alt="Mídia do incidente"
                                     className="max-w-full max-h-[85vh] object-contain"
                                     onError={(e) => {
@@ -626,7 +632,7 @@ const CriseDetalhesPage = () => {
                             )}
                             {selectedMedia.tipo_midia === 'video' && (
                                 <video
-                                    src={selectedMedia.url}
+                                    src={getMediaUrl(selectedMedia.url)}
                                     controls
                                     autoPlay
                                     className="max-w-full max-h-[85vh]"
@@ -639,7 +645,7 @@ const CriseDetalhesPage = () => {
                                     <FileText className="h-20 w-20 text-white mx-auto mb-4" />
                                     <p className="text-white mb-4">Visualização não disponível para este tipo de arquivo</p>
                                     <a
-                                        href={selectedMedia.url}
+                                        href={getMediaUrl(selectedMedia.url)}
                                         download
                                         target="_blank"
                                         rel="noopener noreferrer"

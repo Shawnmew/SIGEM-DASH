@@ -728,41 +728,6 @@ const AlertasPage = () => {
                                                     </p>
                                                 </div>
 
-                                                {/* Incidentes sem mobilização */}
-                                                {diagnostico.incidentes_sem_mobilizacao?.length > 0 && (
-                                                    <div>
-                                                        <p className="text-sm font-medium mb-2">Incidentes sem mobilização ({diagnostico.incidentes_sem_mobilizacao.length}):</p>
-                                                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                                                            {diagnostico.incidentes_sem_mobilizacao.map((inc: any) => (
-                                                                <div key={inc.id} className="flex items-center justify-between bg-muted rounded-lg px-3 py-2">
-                                                                    <div>
-                                                                        <p className="text-sm font-medium truncate max-w-xs">{inc.title}</p>
-                                                                        <p className="text-xs text-muted-foreground">Status: {inc.status}</p>
-                                                                    </div>
-                                                                    {diagnostico.totais?.voluntarios > 0 || diagnostico.totais?.entidades > 0 ? (
-                                                                        <Button
-                                                                            size="sm"
-                                                                            onClick={() => mobilizarIncidente(inc.id)}
-                                                                            disabled={mobilizando === inc.id}
-                                                                            className="ml-2 shrink-0"
-                                                                        >
-                                                                            {mobilizando === inc.id ? (
-                                                                                <span className="flex items-center gap-1">
-                                                                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                                                    A mobilizar...
-                                                                                </span>
-                                                                            ) : (
-                                                                                <span>Mobilizar</span>
-                                                                            )}
-                                                                        </Button>
-                                                                    ) : (
-                                                                        <span className="text-xs text-muted-foreground ml-2">Sem voluntários</span>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
                                         )}
                                     </CardContent>

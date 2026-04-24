@@ -1,15 +1,20 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const data = [
-  { month: "Set", afetados: 4200 },
-  { month: "Out", afetados: 8100 },
-  { month: "Nov", afetados: 6500 },
-  { month: "Dez", afetados: 12000 },
-  { month: "Jan", afetados: 19500 },
-  { month: "Fev", afetados: 44700 },
-];
+interface ChartData {
+    month: string;
+    affected: number;
+}
 
-export function AffectedLineChart() {
+interface AffectedLineChartProps {
+    chartData?: ChartData[];
+}
+
+export function AffectedLineChart({ chartData = [] }: AffectedLineChartProps) {
+  const data = chartData.length > 0 ? chartData : [
+    { month: "Jan", affected: 0 }, { month: "Fev", affected: 0 }, { month: "Mar", affected: 0 },
+    { month: "Abr", affected: 0 }, { month: "Mai", affected: 0 }, { month: "Jun", affected: 0 }
+  ];
+
   return (
     <div className="rounded-2xl bg-card border border-border p-5 animate-slide-up">
       <h3 className="font-semibold text-sm mb-4">Evolução de Pessoas Afetadas</h3>
@@ -28,7 +33,7 @@ export function AffectedLineChart() {
               }}
               formatter={(value: number) => [value.toLocaleString(), "Afetados"]}
             />
-            <Line type="monotone" dataKey="afetados" stroke="hsl(var(--accent))" strokeWidth={2.5} dot={{ r: 3, fill: "hsl(var(--accent))" }} />
+            <Line type="monotone" dataKey="affected" stroke="hsl(var(--accent))" strokeWidth={2.5} dot={{ r: 3, fill: "hsl(var(--accent))" }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

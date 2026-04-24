@@ -1,8 +1,10 @@
 // src/lib/api.ts
 import axios from 'axios';
 
+export const SERVER_URL = 'http://192.168.1.90:8001';
+
 const api = axios.create({
-    baseURL: 'http://192.168.0.201:8001/api',
+    baseURL: `${SERVER_URL}/api`,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
