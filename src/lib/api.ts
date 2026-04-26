@@ -1,7 +1,7 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-export const SERVER_URL = 'http://192.168.1.90:8001';
+export const SERVER_URL = 'http://localhost:8001';
 
 const api = axios.create({
     baseURL: `${SERVER_URL}/api`,

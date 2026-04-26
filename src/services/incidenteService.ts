@@ -16,6 +16,10 @@ export interface Incidente {
     affected_people: number;
     solucao_descricao?: string;
     resolvido_em?: string;
+    confirmacoes_count?: number;
+    validation_score?: number;
+    is_validated_by_entity?: boolean;
+    entity_id_validator?: number;
     categoria?: {
         id: number;
         nome: string;
@@ -57,7 +61,7 @@ export const incidenteService = {
      */
     async getAllIncidentes(): Promise<Incidente[]> {
         try {
-            const response = await api.get('/incidentes', { params: { per_page: 1000 } });
+            const response = await api.get('/incidentes', { params: { per_page: 9999 } });
             if (response.data.success) {
                 const data = response.data.data;
                 // Resposta paginada do Laravel: { data: [...], current_page, ... }
@@ -122,5 +126,35 @@ export const incidenteService = {
             return response.data.data;
         }
         return { total: 0, by_status: {}, by_category: {}, by_month: [] };
+    },
+
+    /**
+     * Confirmar um incidente (crowdsourcing)
+     */
+    async confirmIncidente(id: number): Promise<{ success: boolean; message: string; data?: any }> {
+        try {
+            const response = await api.post(`/incidentes/${id}/confirmar`);
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Erro ao confirmar incidente'
+            };
+        }
+    },
+
+    /**
+     * Validar um incidente (entidade/admin)
+     */
+    async validateIncidente(id: number): Promise<{ success: boolean; message: string; data?: any }> {
+        try {
+            const response = await api.post(`/incidentes/${id}/validate`);
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Erro ao validar incidente'
+            };
+        }
     }
 };

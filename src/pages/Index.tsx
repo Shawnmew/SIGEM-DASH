@@ -37,7 +37,13 @@ const Dashboard = () => {
         critical_count: 0,
         total_affected: 0,
         total_volunteers: 0,
-        response_rate: 0
+        total_entidades: 0,
+        response_rate: 0,
+        my_incident_count: 0,
+        my_volunteer_count: 0,
+        confirmed_validation: 0,
+        pending_validation: 0,
+        entity_validated: 0
     });
     
     const [chartData, setChartData] = useState<ChartData>({
@@ -118,7 +124,13 @@ const Dashboard = () => {
                 critical_count: 0,
                 total_affected: 0,
                 total_volunteers: 0,
-                response_rate: 0
+                total_entidades: 0,
+                response_rate: 0,
+                my_incident_count: 0,
+                my_volunteer_count: 0,
+                confirmed_validation: 0,
+                pending_validation: 0,
+                entity_validated: 0
             });
         } finally {
             setLoading(false);
@@ -239,13 +251,43 @@ const Dashboard = () => {
                         />
                         <StatCard 
                             title="Entidades" 
-                            value="0" 
+                            value={stats.total_entidades} 
                             icon={Building2} 
                             variant="default"
                         />
                     </div>
                 </div>
             )}
+
+            {/* Validation Overview Section */}
+            <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 text-foreground/90 flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-blue-500" />
+                    Estado de Validação
+                </h2>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <StatCard 
+                        title="Validados/Confirmados" 
+                        value={stats.confirmed_validation || 0} 
+                        icon={CheckCircle} 
+                        variant="success"
+                        trend={`${stats.entity_validated || 0} por entidades`}
+                    />
+                    <StatCard 
+                        title="Pendentes de Validação" 
+                        value={stats.pending_validation || 0} 
+                        icon={Clock} 
+                        variant="warning"
+                        trend="Aguardando confirmações"
+                    />
+                    <StatCard 
+                        title="Total de Reportes" 
+                        value={stats.total_incidentes} 
+                        icon={Activity} 
+                        variant="default"
+                    />
+                </div>
+            </div>
 
             {/* Entidade Only Section */}
             {isEntidade && (
@@ -254,13 +296,13 @@ const Dashboard = () => {
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                         <StatCard 
                             title="Meus Incidentes" 
-                            value="0" 
+                            value={stats.my_incident_count || 0} 
                             icon={AlertTriangle} 
                             variant="default"
                         />
                         <StatCard 
                             title="Meus Voluntários" 
-                            value="0" 
+                            value={stats.my_volunteer_count || 0} 
                             icon={Users} 
                             variant="default"
                         />

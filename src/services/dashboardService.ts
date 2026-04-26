@@ -8,7 +8,13 @@ export interface DashboardStats {
     critical_count: number;
     total_affected: number;
     total_volunteers: number;
+    total_entidades: number;
     response_rate: number;
+    my_incident_count?: number;
+    my_volunteer_count?: number;
+    confirmed_validation?: number;
+    pending_validation?: number;
+    entity_validated?: number;
 }
 
 export interface ChartData {
@@ -76,5 +82,25 @@ export const dashboardService = {
             console.error("Erro ao carregar vídeos:", error);
             return [];
         }
+    },
+
+    async reportUser(data: { user_id: number; incidente_id?: number; reason: string }): Promise<any> {
+        const response = await api.post('/user-reports', data);
+        return response.data;
+    },
+
+    async getUserReports(status?: string): Promise<any> {
+        const response = await api.get('/user-reports', { params: { status } });
+        return response.data;
+    },
+
+    async processUserReport(id: number, data: { decision: string; penalty_type?: string; days?: number; admin_comment?: string }): Promise<any> {
+        const response = await api.post(`/user-reports/${id}/process`, data);
+        return response.data;
+    },
+
+    async recoverUserAccount(userId: number): Promise<any> {
+        const response = await api.post(`/users/${userId}/recover`);
+        return response.data;
     }
 };

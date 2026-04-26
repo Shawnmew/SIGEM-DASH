@@ -21,6 +21,8 @@ import {
   CheckCircle,
   BarChart3,
   PieChart as LucidePieChart,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Table,
@@ -98,26 +100,23 @@ interface Incidente {
 }
 
 const severityColors: Record<string, string> = {
-  critical: "bg-red-500 text-white",
-  high: "bg-orange-500 text-white",
-  medium: "bg-yellow-500 text-white",
-  low: "bg-green-500 text-white",
+  critical: "bg-rose-100 text-rose-700 border-rose-200",
+  high: "bg-orange-100 text-orange-700 border-orange-200",
+  medium: "bg-amber-100 text-amber-700 border-amber-200",
+  low: "bg-emerald-100 text-emerald-700 border-emerald-200",
 };
 
 const statusColors: Record<string, string> = {
-  active: "bg-red-500/20 text-red-600 border-red-500/30",
-  responding: "bg-blue-500/20 text-blue-600 border-blue-500/30",
-  monitoring: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30",
-  resolved: "bg-green-500/20 text-green-400 border-green-500/30",
-  pendente: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30",
-  em_analise: "bg-blue-500/20 text-blue-600 border-blue-500/30",
-  confirmado: "bg-green-500/20 text-green-600 border-green-500/30",
-  em_andamento: "bg-orange-500/20 text-orange-600 border-orange-500/30",
-  encerrado: "bg-gray-500/20 text-gray-600 border-gray-500/30",
-  cancelado: "bg-red-500/20 text-red-600 border-red-500/30",
+  pendente: "bg-slate-100 text-slate-600 border-slate-200",
+  em_analise: "bg-indigo-100 text-indigo-600 border-indigo-200",
+  confirmado: "bg-blue-100 text-blue-600 border-blue-200",
+  em_andamento: "bg-rose-100 text-rose-600 border-rose-200",
+  resolvido: "bg-emerald-100 text-emerald-600 border-emerald-200",
+  encerrado: "bg-gray-100 text-gray-500 border-gray-200",
+  cancelado: "bg-rose-50 text-rose-400 border-rose-100",
 };
 
-const CHART_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
+const CHART_COLORS = ["#f43f5e", "#fb7185", "#fda4af", "#e11d48", "#9f1239", "#475569", "#64748b", "#94a3b8"];
 
 // Funções auxiliares DEFINIDAS ANTES de serem usadas
 const getStatusLabel = (status: string): string => {
@@ -178,6 +177,8 @@ const RelatoriosPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [provinceFilter, setProvinceFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("lista");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Carregar dados da API
   useEffect(() => {
@@ -187,7 +188,7 @@ const RelatoriosPage = () => {
   const loadIncidentes = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/incidentes');
+      const response = await api.get('/incidentes', { params: { per_page: 9999 } });
       let data = response.data.data.data || response.data.data || [];
       
       // Mapear dados para o formato esperado
@@ -239,6 +240,17 @@ const RelatoriosPage = () => {
       );
     });
   }, [search, typeFilter, severityFilter, statusFilter, provinceFilter, incidentes]);
+
+  // Resetar página ao filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, typeFilter, severityFilter, statusFilter, provinceFilter]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const currentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
 
   const totalAffected = filtered.reduce((s, c) => s + (c.affectedPeople || 0), 0);
   const totalVolunteers = filtered.reduce(
@@ -436,22 +448,22 @@ const RelatoriosPage = () => {
     <AppLayout>
       <div className="p-4 lg:p-6">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl font-extrabold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">
-                Relatórios de Impacto
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                Relatórios e Métricas
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Análise detalhada de ocorrências e métricas de desempenho
+                Análise consolidada de impacto e resposta a emergências
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="gap-2 bg-gradient-to-r from-red-600 to-red-500">
+                  <Button size="lg" className="gap-2 bg-rose-600 hover:bg-rose-700 shadow-sm transition-all duration-200">
                     <Download className="h-4 w-4" />
-                    Exportar Relatório
+                    Exportar Dados
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -475,40 +487,61 @@ const RelatoriosPage = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
-            <CardContent className="p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <Card className="border-l-4 border-l-rose-500 shadow-sm">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div><p className="text-sm opacity-90">Total Ocorrências</p><p className="text-3xl font-bold">{filtered.length}</p></div>
-                <BarChart3 className="h-8 w-8 opacity-80" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Ocorrências</p>
+                  <p className="text-3xl font-bold">{filtered.length}</p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-rose-50 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-rose-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0">
-            <CardContent className="p-4">
+          
+          <Card className="border-l-4 border-l-slate-400 shadow-sm">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div><p className="text-sm opacity-90">Pessoas Afetadas</p><p className="text-3xl font-bold">{totalAffected.toLocaleString()}</p></div>
-                <Users className="h-8 w-8 opacity-80" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Pessoas Afetadas</p>
+                  <p className="text-3xl font-bold">{totalAffected.toLocaleString()}</p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-slate-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0">
-            <CardContent className="p-4">
+          
+          <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div><p className="text-sm opacity-90">Voluntários</p><p className="text-3xl font-bold">{totalVolunteers}</p></div>
-                <Users className="h-8 w-8 opacity-80" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Voluntários</p>
+                  <p className="text-3xl font-bold">{totalVolunteers}</p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-emerald-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div><p className="text-sm opacity-90">Crises Críticas</p><p className="text-3xl font-bold">{criticalCrises}</p></div>
-                <AlertTriangle className="h-8 w-8 opacity-80" />
+          
+          <Card className="border-l-4 border-l-rose-600 shadow-sm bg-rose-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs font-semibold text-rose-100 uppercase tracking-wider mb-1">Crises Críticas</p>
+                  <p className="text-3xl font-bold">{criticalCrises}</p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                    <AlertTriangle className="h-6 w-6 text-white" />
+                </div>
               </div>
-              <div className="mt-2">
-                <Progress value={(criticalCrises / filtered.length) * 100 || 0} className="h-1 bg-white/30" />
-              </div>
+              <Progress value={(criticalCrises / filtered.length) * 100 || 0} className="h-1.5 bg-white/30" />
             </CardContent>
           </Card>
         </div>
@@ -522,24 +555,24 @@ const RelatoriosPage = () => {
           </TabsList>
 
           {/* Tab Lista */}
-          <TabsContent value="lista" className="mt-4">
-            <div className="rounded-xl border border-border bg-card p-4 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Filter className="h-4 w-4 text-primary" />
-                <h3 className="font-bold text-sm">Filtros Avançados</h3>
+          <TabsContent value="lista" className="mt-6">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm mb-6">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="h-8 w-1 bg-rose-500 rounded-full" />
+                <h3 className="font-bold text-lg">Filtros de Pesquisa</h3>
                 {hasFilters && (
-                  <button onClick={clearFilters} className="ml-auto text-xs text-primary hover:underline">
-                    Limpar filtros
-                  </button>
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="ml-auto text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+                    Limpar Filtros
+                  </Button>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <div className="relative">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="relative lg:col-span-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Pesquisar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+                  <Input placeholder="Filtrar por título..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-muted/30 border-muted-foreground/10 focus-visible:ring-rose-500" />
                 </div>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Tipo de Crise" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os tipos</SelectItem>
                     {[...new Set(incidentes.map(c => c.type))].filter(t => t !== "Não categorizado").map((t) => (
@@ -548,7 +581,7 @@ const RelatoriosPage = () => {
                   </SelectContent>
                 </Select>
                 <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger><SelectValue placeholder="Severidade" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Severidade" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas severidades</SelectItem>
                     <SelectItem value="critical">Crítico</SelectItem>
@@ -558,7 +591,7 @@ const RelatoriosPage = () => {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger><SelectValue placeholder="Estado" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Estado" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos estados</SelectItem>
                     <SelectItem value="pendente">Pendente</SelectItem>
@@ -569,7 +602,7 @@ const RelatoriosPage = () => {
                   </SelectContent>
                 </Select>
                 <Select value={provinceFilter} onValueChange={setProvinceFilter}>
-                  <SelectTrigger><SelectValue placeholder="Província" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Província" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas províncias</SelectItem>
                     {provinces.map((p) => (
@@ -580,19 +613,27 @@ const RelatoriosPage = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100">
-                      <TableHead>Título</TableHead><TableHead>Tipo</TableHead><TableHead>Severidade</TableHead><TableHead>Estado</TableHead><TableHead>Região</TableHead><TableHead>Província</TableHead><TableHead>Data</TableHead><TableHead className="text-right">Afetados</TableHead><TableHead className="text-right">Voluntários</TableHead>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                      <TableHead className="font-semibold text-slate-700">Título</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Tipo</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Severidade</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Estado</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Município</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Província</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Data</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-700">Afetados</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-700">Voluntários</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.length === 0 ? (
+                    {currentItems.length === 0 ? (
                       <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">Nenhuma ocorrência encontrada.</TableCell></TableRow>
                     ) : (
-                      filtered.map((crisis) => (
+                      currentItems.map((crisis) => (
                         <TableRow key={crisis.id} className="hover:bg-gray-50 transition-colors">
                           <TableCell className="font-medium max-w-[200px] truncate">{crisis.title}</TableCell>
                           <TableCell><span className="text-sm">{crisis.type}</span></TableCell>
@@ -602,7 +643,8 @@ const RelatoriosPage = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={statusColors[crisis.status]}>
+                            <Badge variant="outline" className={`font-medium ${statusColors[crisis.status]}`}>
+                              <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" />
                               {getStatusLabel(crisis.status)}
                             </Badge>
                           </TableCell>
@@ -623,9 +665,74 @@ const RelatoriosPage = () => {
                   </TableBody>
                 </Table>
               </div>
-              <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground flex items-center justify-between bg-gray-50">
-                <span>📊 A mostrar {filtered.length} de {incidentes.length} ocorrências</span>
-                <span>👥 Total afetados: {totalAffected.toLocaleString()} · 🦺 Voluntários: {totalVolunteers}</span>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="px-6 py-4 flex items-center justify-between border-t border-border bg-slate-50/30">
+                  <div className="text-xs text-muted-foreground">
+                    A mostrar <span className="font-medium text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-medium text-foreground">{filtered.length}</span> resultados
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                        // Lógica simples para mostrar páginas próximas à atual
+                        let pageNum = i + 1;
+                        if (totalPages > 5 && currentPage > 3) {
+                          pageNum = currentPage - 3 + i + 1;
+                          if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`h-8 w-8 p-0 text-xs ${currentPage === pageNum ? 'bg-rose-600 hover:bg-rose-700' : ''}`}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-border px-6 py-4 text-xs text-muted-foreground flex items-center justify-between bg-white">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                    Total afetados: <span className="font-semibold text-foreground">{totalAffected.toLocaleString()}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Voluntários: <span className="font-semibold text-foreground">{totalVolunteers}</span>
+                  </span>
+                </div>
+                <div className="text-[10px] uppercase tracking-wider font-semibold opacity-50">
+                  Relatório Consolidado SIGEM
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -633,55 +740,111 @@ const RelatoriosPage = () => {
           {/* Tab Gráficos */}
           <TabsContent value="graficos" className="mt-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader><CardTitle>Distribuição por Tipo</CardTitle></CardHeader>
+              <Card className="rounded-2xl shadow-sm border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-slate-800">Distribuição por Tipo</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <div className="h-80">
+                  <div className="h-80 relative">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={chartDataByType} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                        <Pie 
+                          data={chartDataByType} 
+                          cx="50%" 
+                          cy="50%" 
+                          innerRadius={65} 
+                          outerRadius={95} 
+                          paddingAngle={5} 
+                          dataKey="value"
+                          stroke="none"
+                        >
                           {chartDataByType.map((_, index) => (
                             <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip />
-                        <Legend />
+                        <Tooltip
+                          contentStyle={{
+                            background: "rgba(255, 255, 255, 0.9)",
+                            backdropFilter: "blur(8px)",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "12px",
+                            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                            fontSize: 12,
+                            fontWeight: 500
+                          }}
+                        />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader><CardTitle>Distribuição por Status</CardTitle></CardHeader>
+              <Card className="rounded-2xl shadow-sm border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-slate-800">Status das Ocorrências</CardTitle>
+                </CardHeader>
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartDataByStatus} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis type="category" dataKey="name" width={100} />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} />
+                      <BarChart data={chartDataByStatus} layout="vertical" margin={{ left: 20, right: 30 }}>
+                        <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="hsl(var(--border))" opacity={0.4} />
+                        <XAxis type="number" hide />
+                        <YAxis 
+                          type="category" 
+                          dataKey="name" 
+                          width={100} 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 11, fontWeight: 500 }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
+                          contentStyle={{
+                            background: "rgba(255, 255, 255, 0.9)",
+                            backdropFilter: "blur(8px)",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "12px",
+                            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                            fontSize: 12,
+                            fontWeight: 500
+                          }}
+                        />
+                        <Bar dataKey="value" fill="#f43f5e" radius={[0, 4, 4, 0]} barSize={24} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="lg:col-span-2">
-                <CardHeader><CardTitle>Top Províncias Mais Afetadas</CardTitle></CardHeader>
+              <Card className="lg:col-span-2 rounded-2xl shadow-sm border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-slate-800">Top Províncias com Mais Ocorrências</CardTitle>
+                </CardHeader>
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartDataByProvince}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#ef4444" radius={[8, 8, 0, 0]}>
-                          {chartDataByProvince.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                          ))}
-                        </Bar>
+                      <BarChart data={chartDataByProvince} barSize={40}>
+                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="hsl(var(--border))" opacity={0.4} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 500 }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 500 }} />
+                        <Tooltip
+                          cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
+                          contentStyle={{
+                            background: "rgba(255, 255, 255, 0.9)",
+                            backdropFilter: "blur(8px)",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "12px",
+                            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                            fontSize: 12,
+                            fontWeight: 500
+                          }}
+                        />
+                        <Bar dataKey="value" fill="url(#barGradientRel)" radius={[6, 6, 0, 0]} />
+                        <defs>
+                          <linearGradient id="barGradientRel" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.9} />
+                            <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.5} />
+                          </linearGradient>
+                        </defs>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -691,53 +854,112 @@ const RelatoriosPage = () => {
           </TabsContent>
 
           {/* Tab Resumo */}
-          <TabsContent value="resumo" className="mt-4">
-            <Card>
-              <CardHeader><CardTitle>Resumo Executivo</CardTitle></CardHeader>
-              <CardContent>
+          <TabsContent value="resumo" className="mt-6">
+            <Card className="rounded-2xl shadow-sm border-border/60">
+              <CardHeader className="border-b border-border/40 pb-4">
+                <CardTitle className="text-xl font-bold text-slate-800">Resumo Executivo de Impacto</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h3 className="font-semibold text-blue-800 mb-2">📈 Visão Geral</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between"><span className="text-sm">Total de Crises:</span><span className="font-bold">{filtered.length}</span></div>
-                        <div className="flex justify-between"><span className="text-sm">Crises Ativas:</span><span className="font-bold text-orange-600">{activeCrises}</span></div>
-                        <div className="flex justify-between"><span className="text-sm">Crises Resolvidas:</span><span className="font-bold text-green-600">{resolvedCrises}</span></div>
-                        <div className="flex justify-between"><span className="text-sm">Taxa de Resolução:</span><span className="font-bold">{Math.round((resolvedCrises / filtered.length) * 100 || 0)}%</span></div>
+                  {/* Bloco 1 */}
+                  <div className="p-6 border border-slate-100 rounded-2xl bg-slate-50/30 flex flex-col h-full">
+                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-rose-500" />
+                      Visão Geral de Resposta
+                    </h3>
+                    <div className="space-y-4 flex-1 flex flex-col justify-center">
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Total de Ocorrências:</span>
+                        <span className="font-bold text-slate-900">{filtered.length}</span>
                       </div>
-                    </div>
-                    <div className="p-4 bg-red-50 rounded-lg">
-                      <h3 className="font-semibold text-red-800 mb-2">⚠️ Impacto Humano</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between"><span className="text-sm">Pessoas Afetadas:</span><span className="font-bold">{totalAffected.toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span className="text-sm">Média por Crise:</span><span className="font-bold">{Math.round(totalAffected / filtered.length || 0).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span className="text-sm">Voluntários Mobilizados:</span><span className="font-bold">{totalVolunteers}</span></div>
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Crises em Aberto:</span>
+                        <span className="font-bold text-rose-600">{activeCrises}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <span className="text-sm text-slate-600">Crises Resolvidas:</span>
+                        <span className="font-bold text-emerald-600">{resolvedCrises}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-slate-600">Taxa de Resolução:</span>
+                        <div className="text-right">
+                          <span className="font-bold text-slate-900">{Math.round((resolvedCrises / filtered.length) * 100 || 0)}%</span>
+                          <Progress value={(resolvedCrises / filtered.length) * 100 || 0} className="h-1 w-24 mt-1 bg-slate-200" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-yellow-50 rounded-lg">
-                      <h3 className="font-semibold text-yellow-800 mb-2">🏆 Top 3 Crises mais Críticas</h3>
-                      <div className="space-y-3">
-                        {filtered.filter(c => c.severity === "critical").slice(0, 3).map((crisis, idx) => (
-                          <div key={idx} className="border-b pb-2">
-                            <p className="font-medium text-sm">{crisis.title}</p>
-                            <div className="flex justify-between text-xs text-muted-foreground mt-1"><span>{crisis.province}</span><span>{(crisis.affectedPeople || 0).toLocaleString()} afetados</span></div>
+
+                  {/* Bloco 2 */}
+                  <div className="p-6 border border-amber-100 rounded-2xl bg-amber-50/20 flex flex-col h-full">
+                    <h3 className="font-bold text-amber-800 mb-4 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      Pontos de Atenção Crítica
+                    </h3>
+                    <div className="space-y-3 flex-1">
+                      {filtered.filter(c => c.severity === "critical").slice(0, 3).map((crisis, idx) => (
+                        <div key={idx} className="bg-white/60 p-3 rounded-xl border border-amber-100/50 shadow-sm">
+                          <p className="font-semibold text-xs text-amber-900 truncate">{crisis.title}</p>
+                          <div className="flex justify-between text-[10px] text-amber-700/70 mt-1">
+                            <span>{crisis.province}</span>
+                            <span className="font-medium">{(crisis.affectedPeople || 0).toLocaleString()} afetados</span>
                           </div>
-                        ))}
-                        {filtered.filter(c => c.severity === "critical").length === 0 && (
-                          <p className="text-sm text-muted-foreground">Nenhuma crise crítica no momento</p>
-                        )}
+                        </div>
+                      ))}
+                      {filtered.filter(c => c.severity === "critical").length === 0 && (
+                        <p className="text-sm text-muted-foreground italic text-center py-4">Nenhuma crise crítica registada</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bloco 3 */}
+                  <div className="p-6 border border-rose-100 rounded-2xl bg-rose-50/10 flex flex-col h-full">
+                    <h3 className="font-bold text-rose-800 mb-4 flex items-center gap-2">
+                      <Users className="h-4 w-4 text-rose-600" />
+                      Impacto e Mobilização
+                    </h3>
+                    <div className="space-y-4 flex-1 flex flex-col justify-center">
+                      <div className="flex justify-between items-center pb-2 border-b border-rose-100/50">
+                        <span className="text-sm text-rose-900/70">Pessoas Afetadas:</span>
+                        <span className="font-bold text-rose-900">{totalAffected.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-2 border-b border-rose-100/50">
+                        <span className="text-sm text-rose-900/70">Média de Impacto:</span>
+                        <span className="font-bold text-rose-900">{Math.round(totalAffected / filtered.length || 0).toLocaleString()} / crise</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-rose-900/70">Equipe Mobilizada:</span>
+                        <span className="font-bold text-rose-900">{totalVolunteers} voluntários</span>
                       </div>
                     </div>
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <h3 className="font-semibold text-green-800 mb-2">✅ Recomendações</h3>
-                      <ul className="space-y-2 text-sm">
-                        <li className="flex items-start gap-2"><span className="text-green-500">•</span><span>Reforçar equipes nas províncias com maior incidência</span></li>
-                        <li className="flex items-start gap-2"><span className="text-green-500">•</span><span>Aumentar recursos para crises de severidade crítica</span></li>
-                        <li className="flex items-start gap-2"><span className="text-green-500">•</span><span>Monitorar tendências de crescimento de casos ativos</span></li>
-                      </ul>
-                    </div>
+                  </div>
+
+                  {/* Bloco 4 */}
+                  <div className="p-6 border border-emerald-100 rounded-2xl bg-emerald-50/20 flex flex-col h-full">
+                    <h3 className="font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      Diretrizes e Recomendações
+                    </h3>
+                    <ul className="space-y-3 flex-1 flex flex-col justify-center">
+                      <li className="flex items-start gap-3">
+                        <div className="mt-1 h-5 w-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-bold text-emerald-700">1</span>
+                        </div>
+                        <span className="text-xs text-emerald-900/80 leading-relaxed">Priorizar recursos em províncias de alto volume.</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="mt-1 h-5 w-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-bold text-emerald-700">2</span>
+                        </div>
+                        <span className="text-xs text-emerald-900/80 leading-relaxed">Expandir rede de voluntários em áreas críticas.</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <div className="mt-1 h-5 w-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-bold text-emerald-700">3</span>
+                        </div>
+                        <span className="text-xs text-emerald-900/80 leading-relaxed">Otimizar tempo de resposta inicial.</span>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </CardContent>

@@ -13,7 +13,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Filter } from "lucide-react";
+import { 
+  Filter, 
+  MoreHorizontal, 
+  Eye, 
+  Edit, 
+  Settings, 
+  AlertTriangle, 
+  Trash, 
+  RefreshCcw,
+  ShieldCheck
+} from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { dashboardService } from "@/services/dashboardService";
 
 interface Usuario {
   id: number;
@@ -26,6 +45,8 @@ interface Usuario {
   municipio?: string;
   municipio_id?: number;
   created_at?: string;
+  reputation_score?: number;
+  suspended_until?: string;
 }
 
 interface Meta {
@@ -79,6 +100,7 @@ const UsuariosPage = () => {
   const [penaltyReason, setPenaltyReason] = useState("");
   const [showApprove, setShowApprove] = useState(false);
   const [statusToApprove, setStatusToApprove] = useState<string>("");
+  const [showDetails, setShowDetails] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   
@@ -297,6 +319,18 @@ const UsuariosPage = () => {
     }
   };
 
+  const handleRecoverUser = async (id: number) => {
+    if (!confirm("Deseja recuperar a conta deste usuário e restaurar sua reputação?")) return;
+
+    try {
+      await dashboardService.recoverUserAccount(id);
+      fetchUsuarios(page, search, tipo, status);
+      toast.success("Conta recuperada com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao recuperar conta.");
+    }
+  };
+
   const handleDeleteUser = async (id: number) => {
     if (!confirm("Tem certeza que deseja remover este usuário?")) return;
 
@@ -314,10 +348,16 @@ const UsuariosPage = () => {
       activo: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400",
       inactivo: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400",
       bloqueado: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400",
-      pendente: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
+      pendente: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400",
+      suspenso: "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400",
+      removido: "bg-red-500 text-white"
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[status] || config.pendente}`}>
-      {status === 'activo' ? 'Ativo' : status === 'inactivo' ? 'Inativo' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'}
+      {status === 'activo' ? 'Ativo' : 
+       status === 'inactivo' ? 'Inativo' : 
+       status === 'bloqueado' ? 'Bloqueado' : 
+       status === 'suspenso' ? 'Suspenso' :
+       status === 'removido' ? 'Removido' : 'Pendente'}
     </span>;
   };
 
@@ -384,7 +424,9 @@ const UsuariosPage = () => {
                 <SelectItem value="activo">Ativo</SelectItem>
                 <SelectItem value="inactivo">Inativo</SelectItem>
                 <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="suspenso">Suspenso</SelectItem>
                 <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                <SelectItem value="removido">Removido</SelectItem>
               </SelectContent>
             </Select>
             <Button type="submit">Buscar</Button>
@@ -433,6 +475,7 @@ const UsuariosPage = () => {
                 <TableHead className="text-foreground">Email</TableHead>
                 <TableHead className="text-foreground">Telefone</TableHead>
                 <TableHead className="text-foreground">Tipo</TableHead>
+                <TableHead className="text-foreground">Reputação</TableHead>
                 <TableHead className="text-foreground">Status</TableHead>
                 <TableHead className="text-right text-foreground">Ações</TableHead>
               </TableRow>
@@ -461,93 +504,72 @@ const UsuariosPage = () => {
                     <TableCell className="text-foreground">{usuario.email}</TableCell>
                     <TableCell className="text-foreground">{usuario.telefone || "-"}</TableCell>
                     <TableCell>{getTipoBadge(usuario.tipo || "cidadao")}</TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold">{Math.round((usuario.reputation_score || 0) * 100)}%</span>
+                            <div className="w-12 bg-secondary rounded-full h-1">
+                                <div 
+                                    className={`h-1 rounded-full ${
+                                        (usuario.reputation_score || 0) > 0.7 ? 'bg-green-500' : 
+                                        (usuario.reputation_score || 0) > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                                    }`} 
+                                    style={{ width: `${(usuario.reputation_score || 0) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    </TableCell>
                     <TableCell>{getStatusBadge(usuario.status)}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => setSelectedUser(usuario)}>Ver</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader>
-                          <div className="space-y-2">
-                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">ID:</b><span className="text-foreground">{selectedUser?.id}</span></div>
-                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Nome:</b><span className="text-foreground">{selectedUser?.nome} {selectedUser?.sobrenome}</span></div>
-                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Email:</b><span className="text-foreground">{selectedUser?.email}</span></div>
-                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Telefone:</b><span className="text-foreground">{selectedUser?.telefone || "-"}</span></div>
-                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Tipo:</b><span className="text-foreground">{selectedUser?.tipo || "Cidadão"}</span></div>
-                            <div className="flex gap-2"><b className="w-24 text-muted-foreground">Status:</b>{getStatusBadge(selectedUser?.status || "pendente")}</div>
-                          </div>
-                          <DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                      
-                      <Dialog open={showEdit && editUser?.id === usuario.id} onOpenChange={setShowEdit}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => { setEditUser(usuario); setShowEdit(true); }}>Editar</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader>
-                          <form onSubmit={handleUpdateUser} className="space-y-3">
-                            <Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
-                            <Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" />
-                            <Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
-                            <Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" />
-                            <Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="operador">Operador</SelectItem>
-                                <SelectItem value="voluntario">Voluntário</SelectItem>
-                                <SelectItem value="cidadao">Cidadão</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <DialogFooter>
-                              <Button type="submit">Salvar</Button>
-                              <DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                      
-                      <Dialog open={showApprove && selectedUser?.id === usuario.id} onOpenChange={setShowApprove}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedUser(usuario); setStatusToApprove(usuario.status); }}>Status</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader>
-                          <Select value={statusToApprove} onValueChange={setStatusToApprove}>
-                            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="activo">Ativo</SelectItem>
-                              <SelectItem value="inactivo">Inativo</SelectItem>
-                              <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                              <SelectItem value="pendente">Pendente</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <DialogFooter>
-                            <Button onClick={handleStatusChange}>Salvar</Button>
-                            <DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                      
-                      <Dialog open={showPenalize && selectedUser?.id === usuario.id} onOpenChange={setShowPenalize}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => { setShowPenalize(true); setSelectedUser(usuario); }}>Penalizar</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader><DialogTitle>Penalizar Usuário</DialogTitle></DialogHeader>
-                          <Textarea placeholder="Motivo da penalização..." value={penaltyReason} onChange={e => setPenaltyReason(e.target.value)} rows={4} />
-                          <DialogFooter>
-                            <Button onClick={handlePenalizeUser}>Penalizar</Button>
-                            <DialogClose asChild><Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button></DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                      
-                      {currentUser?.id !== usuario.id && (
-                        <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(usuario.id)}>Remover</Button>
-                      )}
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          
+                          <DropdownMenuItem onClick={() => { setSelectedUser(usuario); setShowDetails(true); }}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            <span>Ver Detalhes</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem onClick={() => { setEditUser(usuario); setShowEdit(true); }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Editar</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem onClick={() => { setSelectedUser(usuario); setStatusToApprove(usuario.status); setShowApprove(true); }}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            <span>Alterar Status</span>
+                          </DropdownMenuItem>
+                          
+                          {usuario.tipo === 'cidadao' && (
+                            <DropdownMenuItem onClick={() => { setSelectedUser(usuario); setShowPenalize(true); }} className="text-orange-600 focus:text-orange-600">
+                              <AlertTriangle className="mr-2 h-4 w-4" />
+                              <span>Penalizar</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {['suspenso', 'removido', 'bloqueado', 'inactivo'].includes(usuario.status) && (
+                            <DropdownMenuItem onClick={() => handleRecoverUser(usuario.id)} className="text-green-600 focus:text-green-600">
+                              <RefreshCcw className="mr-2 h-4 w-4" />
+                              <span>Recuperar Conta</span>
+                            </DropdownMenuItem>
+                          )}
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {currentUser?.id !== usuario.id && (
+                            <DropdownMenuItem onClick={() => handleDeleteUser(usuario.id)} className="text-red-600 focus:text-red-600 font-medium">
+                              <Trash className="mr-2 h-4 w-4" />
+                              <span>Remover</span>
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -555,6 +577,151 @@ const UsuariosPage = () => {
             </TableBody>
           </Table>
         </div>
+        
+        {/* Modais fora do loop para melhor performance */}
+        <Dialog open={showDetails} onOpenChange={setShowDetails}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
+                  {selectedUser?.nome?.[0]}{selectedUser?.sobrenome?.[0]}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{selectedUser?.nome} {selectedUser?.sobrenome}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedUser?.email}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">ID</p>
+                  <p className="text-sm font-medium">{selectedUser?.id}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Telefone</p>
+                  <p className="text-sm font-medium">{selectedUser?.telefone || "-"}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Tipo de Conta</p>
+                  <div>{selectedUser && getTipoBadge(selectedUser.tipo || "cidadao")}</div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <div>{selectedUser && getStatusBadge(selectedUser.status)}</div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Reputação</p>
+                  <p className="text-sm font-bold text-primary">{Math.round((selectedUser?.reputation_score || 0) * 100)}%</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Membro desde</p>
+                  <p className="text-sm font-medium">{selectedUser?.created_at ? new Date(selectedUser.created_at).toLocaleDateString() : "-"}</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => setShowDetails(false)}>Fechar</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showEdit} onOpenChange={setShowEdit}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader>
+            <form onSubmit={handleUpdateUser} className="space-y-3 pt-4">
+              <div className="space-y-1">
+                <Label>Nome</Label>
+                <Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
+              </div>
+              <div className="space-y-1">
+                <Label>Sobrenome</Label>
+                <Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" />
+              </div>
+              <div className="space-y-1">
+                <Label>Email</Label>
+                <Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
+              </div>
+              <div className="space-y-1">
+                <Label>Telefone</Label>
+                <Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" />
+              </div>
+              <div className="space-y-1">
+                <Label>Tipo</Label>
+                <Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="operador">Operador</SelectItem>
+                    <SelectItem value="voluntario">Voluntário</SelectItem>
+                    <SelectItem value="cidadao">Cidadão</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter className="pt-4">
+                <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
+                <Button type="submit">Salvar Alterações</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showApprove} onOpenChange={setShowApprove}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Alterar Status da Conta</DialogTitle></DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="bg-muted p-3 rounded-md">
+                <p className="text-sm">Usuário: <b>{selectedUser?.nome} {selectedUser?.sobrenome}</b></p>
+                <p className="text-xs text-muted-foreground mt-1">Status atual: {selectedUser?.status}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Novo Status</Label>
+                <Select value={statusToApprove} onValueChange={setStatusToApprove}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o novo status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="activo">Ativo</SelectItem>
+                    <SelectItem value="inactivo">Inativo</SelectItem>
+                    <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                    <SelectItem value="suspenso">Suspenso</SelectItem>
+                    <SelectItem value="removido">Removido</SelectItem>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button>
+              <Button onClick={handleStatusChange}>Confirmar Mudança</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showPenalize} onOpenChange={setShowPenalize}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                Penalizar Usuário
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Esta ação reduzirá a reputação de <b>{selectedUser?.nome}</b> e poderá resultar em suspensão automática se o score atingir 0%.
+              </p>
+              <div className="space-y-2">
+                <Label>Motivo da Penalização</Label>
+                <Textarea 
+                  placeholder="Descreva o motivo (ex: Reporte falso repetitivo, má conduta...)" 
+                  value={penaltyReason} 
+                  onChange={e => setPenaltyReason(e.target.value)} 
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button>
+              <Button variant="destructive" onClick={handlePenalizeUser}>Aplicar Penalização</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
         {meta && meta.last_page > 1 && (
           <Pagination className="mt-4">

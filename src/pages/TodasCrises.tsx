@@ -20,7 +20,10 @@ import {
     ChevronDown,
     ChevronUp,
     Activity,
-    Users
+    Users,
+    ChevronLeft,
+    ChevronRight,
+    Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,6 +102,10 @@ const TodasCrisesPage = () => {
     const [municipioFilter, setMunicipioFilter] = useState<string>('all');
     const [ordenarPor, setOrdenarPor] = useState<string>('created_at');
     const [ordenarDirecao, setOrdenarDirecao] = useState<'asc' | 'desc'>('desc');
+    
+    // Paginação
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 12;
 
     const [categorias, setCategorias] = useState<{ id: number; nome: string }[]>([]);
     const [municipios, setMunicipios] = useState<{ id: number; nome: string; provincia?: string }[]>([]);
@@ -172,7 +179,14 @@ const TodasCrisesPage = () => {
         });
 
         setFilteredIncidentes(filtered);
+        setCurrentPage(1); // Resetar página ao filtrar
     }, [search, statusFilter, categoriaFilter, municipioFilter, ordenarPor, ordenarDirecao, incidentes]);
+
+    const totalPages = Math.ceil(filteredIncidentes.length / itemsPerPage);
+    const currentItems = filteredIncidentes.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     const resetFilters = () => {
         setSearch('');
@@ -183,13 +197,21 @@ const TodasCrisesPage = () => {
         setOrdenarDirecao('desc');
     };
 
-    const getStatusBadge = (status: string) => {
-        const config = statusConfig[status] || statusConfig.pendente;
+    const getStatusBadge = (incidente: Incidente) => {
+        const config = statusConfig[incidente.status] || statusConfig.pendente;
         return (
-            <Badge className={`${config.color} flex items-center gap-1 w-fit`}>
-                {config.icon}
-                {config.label}
-            </Badge>
+            <div className="flex flex-col gap-1">
+                <Badge className={`${config.color} flex items-center gap-1 w-fit`}>
+                    {config.icon}
+                    {config.label}
+                </Badge>
+                {incidente.is_validated_by_entity && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 text-[10px] py-0 px-1 w-fit flex items-center gap-0.5">
+                        <Shield className="h-2 w-2" />
+                        Validado por Entidade
+                    </Badge>
+                )}
+            </div>
         );
     };
 
@@ -449,7 +471,7 @@ const TodasCrisesPage = () => {
                 </div>
 
                 {/* Incidentes List/Grid */}
-                {filteredIncidentes.length === 0 ? (
+                {currentItems.length === 0 ? (
                     <Card>
                         <CardContent className="py-12 text-center text-muted-foreground">
                             <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -464,7 +486,7 @@ const TodasCrisesPage = () => {
                     </Card>
                 ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredIncidentes.map((incidente) => (
+                        {currentItems.map((incidente) => (
                             <Card
                                 key={incidente.id}
                                 className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -475,7 +497,7 @@ const TodasCrisesPage = () => {
                             >
                                 <CardContent className="p-4">
                                     <div className="flex justify-between items-start mb-2">
-                                        {getStatusBadge(incidente.status)}
+                                        {getStatusBadge(incidente)}
                                         <span className="text-xs text-muted-foreground">
                                             {getTimeAgo(incidente.created_at)}
                                         </span>
@@ -536,11 +558,11 @@ const TodasCrisesPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredIncidentes.map((incidente) => (
+                                    {currentItems.map((incidente) => (
                                         <tr key={incidente.id} className="border-b border-border hover:bg-muted/50">
                                             <td className="p-3">{incidente.id}</td>
                                             <td className="p-3 font-medium max-w-xs truncate">{incidente.title}</td>
-                                            <td className="p-3">{getStatusBadge(incidente.status)}</td>
+                                            <td className="p-3">{getStatusBadge(incidente)}</td>
                                             <td className="p-3">{incidente.categoria?.nome || '-'}</td>
                                             <td className="p-3">{incidente.municipio?.nome || '-'}</td>
                                             <td className="p-3">{incidente.affected_people || 0}</td>
@@ -566,9 +588,58 @@ const TodasCrisesPage = () => {
                     </div>
                 )}
 
-                {/* Footer com total */}
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                    Mostrando {filteredIncidentes.length} de {incidentes.length} crises
+                {/* Footer com paginação */}
+                <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-border pt-6">
+                    <div className="text-sm text-muted-foreground">
+                        Mostrando <span className="font-medium text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filteredIncidentes.length)}</span> de <span className="font-medium text-foreground">{filteredIncidentes.length}</span> crises
+                    </div>
+                    
+                    {totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="h-9 w-9 p-0"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                    let pageNum = i + 1;
+                                    if (totalPages > 5 && currentPage > 3) {
+                                        pageNum = currentPage - 2 + i;
+                                        if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                                    }
+                                    if (pageNum < 1) pageNum = 1;
+                                    
+                                    return (
+                                        <Button
+                                            key={pageNum}
+                                            variant={currentPage === pageNum ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`h-9 w-9 p-0 ${currentPage === pageNum ? 'bg-primary' : ''}`}
+                                        >
+                                            {pageNum}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="h-9 w-9 p-0"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Modal de Detalhes */}
@@ -587,7 +658,7 @@ const TodasCrisesPage = () => {
                         {selectedIncidente && (
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    {getStatusBadge(selectedIncidente.status)}
+                                    {getStatusBadge(selectedIncidente)}
                                     <span className="text-xs text-muted-foreground">
                                         Reportado em {formatDate(selectedIncidente.created_at)}
                                     </span>
@@ -641,6 +712,40 @@ const TodasCrisesPage = () => {
                                         </p>
                                         <p className="text-xs text-muted-foreground">Mídias Anexadas</p>
                                     </div>
+                                </div>
+
+                                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 flex flex-col gap-2">
+                                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                                        <Shield className="h-4 w-4 text-blue-500" />
+                                        Validação Híbrida
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4 mt-1">
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Confirmações de utilizadores</p>
+                                            <p className="text-lg font-bold">{selectedIncidente.confirmacoes_count || 0}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Score de Validação</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-lg font-bold">{Math.round((selectedIncidente.validation_score || 0) * 100)}%</p>
+                                                <div className="w-full bg-gray-200 rounded-full h-1.5 max-w-[60px]">
+                                                    <div 
+                                                        className={`h-1.5 rounded-full ${
+                                                            (selectedIncidente.validation_score || 0) > 0.7 ? 'bg-green-500' : 
+                                                            (selectedIncidente.validation_score || 0) > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                                                        }`} 
+                                                        style={{ width: `${(selectedIncidente.validation_score || 0) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {selectedIncidente.is_validated_by_entity && (
+                                        <p className="text-xs text-green-600 font-medium flex items-center gap-1 mt-1">
+                                            <CheckCircle className="h-3 w-3" />
+                                            Este reporte foi validado oficialmente por uma entidade promotora.
+                                        </p>
+                                    )}
                                 </div>
 
                                 {selectedIncidente.user && (

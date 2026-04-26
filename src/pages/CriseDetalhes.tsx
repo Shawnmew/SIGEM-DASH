@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { dashboardService } from "@/services/dashboardService";
 import { AppLayout } from "@/components/AppLayout";
 import api, { SERVER_URL } from "@/lib/api";
 import { toast } from "sonner";
@@ -22,6 +24,7 @@ import {
   Play,
   Download,
   ZoomIn,
+  Shield,
   Headphones
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,6 +95,10 @@ interface Incidente {
     };
     midias: Midia[];
     voluntarios: Voluntario[];
+    validation_score?: number;
+    confirmacoes_count?: number;
+    is_validated_by_entity?: boolean;
+    entity_id_validator?: number;
     alertas?: {
         id: number;
         tipo: string;
@@ -132,6 +139,11 @@ const statusConfig: Record<string, { label: string; color: string; icon: JSX.Ele
         color: "bg-green-100 text-green-800 border-green-200",
         icon: <CheckCircle className="h-4 w-4" />
     },
+    validado_entidade: { 
+        label: "Validado por Entidade", 
+        color: "bg-blue-100 text-blue-800 border-blue-200",
+        icon: <Shield className="h-4 w-4" />
+    },
     em_andamento: { 
         label: "Em Andamento", 
         color: "bg-orange-100 text-orange-800 border-orange-200",
@@ -154,13 +166,15 @@ const statusConfig: Record<string, { label: string; color: string; icon: JSX.Ele
     },
 };
 
-const getStatusConfig = (status: string) => {
-    return statusConfig[status] || statusConfig.pendente;
+const getStatusConfig = (incidente: Incidente) => {
+    if (incidente.is_validated_by_entity) return statusConfig.validado_entidade;
+    return statusConfig[incidente.status] || statusConfig.pendente;
 };
 
 const CriseDetalhesPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { user: currentUser, isEntidade, isAdmin } = useAuth();
     const [incidente, setIncidente] = useState<Incidente | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("detalhes");
@@ -220,6 +234,27 @@ const CriseDetalhesPage = () => {
         setSelectedMedia(null);
     };
 
+    const handleReportUser = async (reason: string) => {
+        if (!incidente || !incidente.user) return;
+        
+        try {
+            const response = await dashboardService.reportUser({
+                user_id: incidente.user.id,
+                incidente_id: incidente.id,
+                reason: reason
+            });
+            
+            if (response.success) {
+                toast.success("Denúncia enviada com sucesso!");
+            } else {
+                toast.error(response.message || "Erro ao enviar denúncia");
+            }
+        } catch (error) {
+            console.error("Erro ao denunciar utilizador:", error);
+            toast.error("Erro ao enviar denúncia");
+        }
+    };
+
     const getMediaUrl = (url: string) => {
         if (!url) return "";
         if (url.startsWith('http')) return url;
@@ -252,7 +287,7 @@ const CriseDetalhesPage = () => {
         );
     }
 
-    const status = getStatusConfig(incidente.status);
+    const status = getStatusConfig(incidente);
 
     return (
         <AppLayout>
@@ -342,6 +377,21 @@ const CriseDetalhesPage = () => {
                                                         {incidente.user.telefone}
                                                     </p>
                                                 )}
+                                                
+                                                {(isEntidade || isAdmin) && incidente.user && (
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        className="mt-2 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 flex items-center gap-1 h-7 text-[10px]"
+                                                        onClick={() => {
+                                                            const reason = window.prompt("Motivo da denúncia:");
+                                                            if (reason) handleReportUser(reason);
+                                                        }}
+                                                    >
+                                                        <AlertTriangle className="h-3 w-3" />
+                                                        Denunciar Cidadão
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                         <Separator />
@@ -364,6 +414,50 @@ const CriseDetalhesPage = () => {
                                                 )}
                                             </div>
                                         </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-sm flex items-center gap-2">
+                                            <Shield className="h-4 w-4 text-blue-500" />
+                                            Validação Híbrida
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="flex justify-between items-end">
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Confirmações</p>
+                                                <p className="text-xl font-bold">{incidente.confirmacoes_count || 0}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs text-muted-foreground">Score</p>
+                                                <p className="text-xl font-bold">{Math.round((incidente.validation_score || 0) * 100)}%</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="w-full bg-secondary rounded-full h-2">
+                                            <div 
+                                                className={`h-2 rounded-full transition-all duration-500 ${
+                                                    (incidente.validation_score || 0) > 0.7 ? 'bg-green-500' : 
+                                                    (incidente.validation_score || 0) > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                                                }`} 
+                                                style={{ width: `${(incidente.validation_score || 0) * 100}%` }}
+                                            />
+                                        </div>
+
+                                        {incidente.is_validated_by_entity ? (
+                                            <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-100 flex items-center gap-2">
+                                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                                <span className="text-[10px] text-green-700 font-medium leading-tight">
+                                                    Validado oficialmente por uma entidade promotora.
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <p className="text-[10px] text-muted-foreground italic">
+                                                Aguardando validação oficial ou mais confirmações da comunidade.
+                                            </p>
+                                        )}
                                     </CardContent>
                                 </Card>
 
