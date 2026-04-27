@@ -12,7 +12,8 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Filter } from "lucide-react";
+import { Filter, Search, Plus, Trash2, Edit, CheckCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface Entidade {
   id: number;
@@ -59,21 +60,23 @@ interface Provincia {
   sigla: string;
 }
 
-const servicoTipoLabels: Record<string, string> = {
-  policia: "Polícia",
-  bombeiros: "Bombeiros",
-  hospital: "Hospital",
+const getServicoTipoLabels = (t: any): Record<string, string> => ({
+  policia: t('police') || "Polícia",
+  bombeiros: t('firefighters') || "Bombeiros",
+  hospital: t('hospital') || "Hospital",
   inema: "INEMA",
-  protecao_civil: "Proteção Civil",
-  cruz_vermelha: "Cruz Vermelha",
-  exercito: "Exército",
-  servico_municipal: "Serviço Municipal",
-  posto_medico: "Posto Médico",
-  centro_saude: "Centro de Saúde",
-};
+  protecao_civil: t('civil_protection') || "Proteção Civil",
+  cruz_vermelha: t('red_cross') || "Cruz Vermelha",
+  exercito: t('army') || "Exército",
+  servico_municipal: t('municipal_service') || "Serviço Municipal",
+  posto_medico: t('medical_post') || "Posto Médico",
+  centro_saude: t('health_center') || "Centro de Saúde",
+});
 
 const EntidadesPage = () => {
   const { isAdmin, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
+  const servicoTipoLabels = getServicoTipoLabels(t);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,7 +104,7 @@ const EntidadesPage = () => {
   const [loadingNif, setLoadingNif] = useState(false);
 
   if (!authLoading && !isAdmin) {
-    toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
+    toast.error(t('access_denied'));
     return <Navigate to="/" replace />;
   }
 
@@ -152,10 +155,9 @@ const EntidadesPage = () => {
         to: res.data.data.entities.to,
       });
     } catch (e) {
-      console.error("Erro ao carregar entidades:", e);
       setEntidades([]);
       setMeta(null);
-      toast.error("Erro ao carregar entidades");
+      toast.error(t('loading'));
     } finally {
       setLoading(false);
     }
@@ -191,9 +193,9 @@ const EntidadesPage = () => {
     if (!newEntity.nif.trim()) errors.nif = "NIF é obrigatório";
     if (!newEntity.email.trim()) errors.email = "Email é obrigatório";
     else if (!/\S+@\S+\.\S+/.test(newEntity.email)) errors.email = "Email inválido";
-    if (!newEntity.password) errors.password = "Senha é obrigatória";
-    else if (newEntity.password.length < 6) errors.password = "Senha deve ter pelo menos 6 caracteres";
-    if (!newEntity.municipio_id) errors.municipio_id = "Município é obrigatório";
+    if (!newEntity.password) errors.password = t('password_required');
+    else if (newEntity.password.length < 6) errors.password = t('password_too_short');
+    if (!newEntity.municipio_id) errors.municipio_id = t('municipality_required');
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -281,7 +283,7 @@ const EntidadesPage = () => {
   };
 
   const handleDeleteEntity = async (id: number) => {
-    if (!confirm("Tem certeza que deseja remover esta entidade?")) return;
+    if (!confirm(t('confirm_remove_entity'))) return;
     try {
       await api.delete(`/admin/entities/${id}`);
       fetchEntidades(page, search, tipo, status, servicoTipo, provinciaId);
@@ -299,7 +301,7 @@ const EntidadesPage = () => {
       pendente: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400" 
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[status] || config.pendente}`}>
-      {status === 'activo' ? 'Ativo' : status === 'inactivo' ? 'Inativo' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'}
+      {status === 'activo' ? t('active') : status === 'inactivo' ? t('inactive') : status === 'bloqueado' ? t('blocked') : t('pending')}
     </span>;
   };
 
@@ -318,12 +320,12 @@ const EntidadesPage = () => {
       <div className="mb-6 pl-12 lg:pl-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold dark:text-white">Entidades Promotoras</h1>
-            <p className="text-sm text-muted-foreground mt-1">Gestão de entidades promotoras e serviços de emergência</p>
+            <h1 className="text-2xl font-extrabold dark:text-white">{t('promoter_entities')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('promoter_entities_subtitle')}</p>
           </div>
           {hasActiveFilters && (
             <Button variant="outline" size="sm" onClick={handleResetFilters}>
-              Limpar Filtros
+              {t('clear_filters')}
             </Button>
           )}
         </div>
@@ -333,44 +335,44 @@ const EntidadesPage = () => {
         <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
           <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
             <Input 
-              placeholder="Buscar por nome, email ou telefone..." 
+              placeholder={t('search_entity_placeholder')} 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
               className="w-64" 
             />
             
             <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Tipo" /></SelectTrigger>
+              <SelectTrigger className="w-36"><SelectValue placeholder={t('type')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="publica">Pública</SelectItem>
-                <SelectItem value="privada">Privada</SelectItem>
+                <SelectItem value="all">{t('all')}</SelectItem>
+                <SelectItem value="publica">{t('public')}</SelectItem>
+                <SelectItem value="privada">{t('private')}</SelectItem>
                 <SelectItem value="ong">ONG</SelectItem>
-                <SelectItem value="associacao">Associação</SelectItem>
+                <SelectItem value="associacao">{t('association')}</SelectItem>
               </SelectContent>
             </Select>
             
             <Select value={servicoTipo} onValueChange={value => { setServicoTipo(value); setPage(1); }}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Serviço" /></SelectTrigger>
+              <SelectTrigger className="w-40"><SelectValue placeholder={t('service')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os serviços</SelectItem>
-                <SelectItem value="policia">Polícia</SelectItem>
-                <SelectItem value="bombeiros">Bombeiros</SelectItem>
-                <SelectItem value="hospital">Hospital</SelectItem>
+                <SelectItem value="all">{t('all_services')}</SelectItem>
+                <SelectItem value="policia">{t('police')}</SelectItem>
+                <SelectItem value="bombeiros">{t('firefighters')}</SelectItem>
+                <SelectItem value="hospital">{t('hospital')}</SelectItem>
                 <SelectItem value="inema">INEMA</SelectItem>
-                <SelectItem value="protecao_civil">Proteção Civil</SelectItem>
-                <SelectItem value="cruz_vermelha">Cruz Vermelha</SelectItem>
-                <SelectItem value="exercito">Exército</SelectItem>
-                <SelectItem value="servico_municipal">Serviço Municipal</SelectItem>
-                <SelectItem value="posto_medico">Posto Médico</SelectItem>
-                <SelectItem value="centro_saude">Centro de Saúde</SelectItem>
+                <SelectItem value="protecao_civil">{t('civil_protection')}</SelectItem>
+                <SelectItem value="cruz_vermelha">{t('red_cross')}</SelectItem>
+                <SelectItem value="exercito">{t('army')}</SelectItem>
+                <SelectItem value="servico_municipal">{t('municipal_service')}</SelectItem>
+                <SelectItem value="posto_medico">{t('medical_post')}</SelectItem>
+                <SelectItem value="centro_saude">{t('health_center')}</SelectItem>
               </SelectContent>
             </Select>
             
             <Select value={provinciaId} onValueChange={value => { setProvinciaId(value); setPage(1); }}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Província" /></SelectTrigger>
+              <SelectTrigger className="w-40"><SelectValue placeholder={t('province')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas províncias</SelectItem>
+                <SelectItem value="all">{t('all_provinces')}</SelectItem>
                 {provincias.map(p => (
                   <SelectItem key={p.id} value={String(p.id)}>{p.nome}</SelectItem>
                 ))}
@@ -378,23 +380,23 @@ const EntidadesPage = () => {
             </Select>
             
             <Select value={status} onValueChange={value => { setStatus(value); setPage(1); }}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="w-36"><SelectValue placeholder={t('status')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="activo">Ativo</SelectItem>
-                <SelectItem value="inactivo">Inativo</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                <SelectItem value="all">{t('all')}</SelectItem>
+                <SelectItem value="activo">{t('active')}</SelectItem>
+                <SelectItem value="inactivo">{t('inactive')}</SelectItem>
+                <SelectItem value="pendente">{t('pending')}</SelectItem>
+                <SelectItem value="bloqueado">{t('blocked')}</SelectItem>
               </SelectContent>
             </Select>
             
-            <Button type="submit">Buscar</Button>
+            <Button type="submit">{t('verify')}</Button>
           </form>
           
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
-            <DialogTrigger asChild><Button>+ Nova Entidade</Button></DialogTrigger>
+            <DialogTrigger asChild><Button>+ {t('new_entity')}</Button></DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Cadastrar Nova Entidade</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t('register_new_entity')}</DialogTitle></DialogHeader>
               <form onSubmit={handleCreateEntity} className="space-y-4">
                 <div className="flex flex-col gap-4">
                   <div className="grid grid-cols-1 gap-2">
@@ -405,7 +407,7 @@ const EntidadesPage = () => {
                         onChange={e => setNewEntity({...newEntity, nif: e.target.value})} 
                         onBlur={handleNifLookup}
                         className={formErrors.nif ? "border-red-500" : ""} 
-                        placeholder="Digite o NIF para verificar"
+                        placeholder={t('nif_verify_placeholder')}
                         maxLength={14}
                       />
                       <Button 
@@ -414,23 +416,23 @@ const EntidadesPage = () => {
                         onClick={handleNifLookup}
                         disabled={loadingNif || newEntity.nif.length < 9}
                       >
-                        Verificar
+                        {t('verify')}
                       </Button>
                     </div>
                     {formErrors.nif && <p className="text-xs text-red-500">{formErrors.nif}</p>}
                   </div>
                   <div>
-                    <Label>Nome / Denominação Social *</Label>
+                    <Label>{t('company_name_label')} *</Label>
                     <Input value={newEntity.nome} onChange={e => setNewEntity({...newEntity, nome: e.target.value})} className={formErrors.nome ? "border-red-500" : ""} />
                     {formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}
                   </div>
                 </div>
                 <div><Label>Email *</Label><Input type="email" value={newEntity.email} onChange={e => setNewEntity({...newEntity, email: e.target.value})} className={formErrors.email ? "border-red-500" : ""} />{formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}</div>
-                <div><Label>Senha *</Label><Input type="password" value={newEntity.password} onChange={e => setNewEntity({...newEntity, password: e.target.value})} className={formErrors.password ? "border-red-500" : ""} />{formErrors.password && <p className="text-xs text-red-500">{formErrors.password}</p>}</div>
-                <div><Label>Município *</Label>
+                <div><Label>{t('password')} *</Label><Input type="password" value={newEntity.password} onChange={e => setNewEntity({...newEntity, password: e.target.value})} className={formErrors.password ? "border-red-500" : ""} />{formErrors.password && <p className="text-xs text-red-500">{formErrors.password}</p>}</div>
+                <div><Label>{t('municipality')} *</Label>
                   <Select value={newEntity.municipio_id} onValueChange={value => setNewEntity({...newEntity, municipio_id: value})}>
                     <SelectTrigger className={formErrors.municipio_id ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Selecione o município" />
+                      <SelectValue placeholder={t('select_municipality')} />
                     </SelectTrigger>
                     <SelectContent className="max-h-64">
                       {municipiosFiltrados.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.nome}</SelectItem>)}
@@ -438,12 +440,12 @@ const EntidadesPage = () => {
                   </Select>
                   {formErrors.municipio_id && <p className="text-xs text-red-500">{formErrors.municipio_id}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Tipo</Label><Select value={newEntity.tipo} onValueChange={value => setNewEntity({...newEntity, tipo: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="publica">Pública</SelectItem><SelectItem value="privada">Privada</SelectItem><SelectItem value="ong">ONG</SelectItem><SelectItem value="associacao">Associação</SelectItem></SelectContent></Select></div>
-                  <div><Label>Status</Label><Select value={newEntity.status} onValueChange={value => setNewEntity({...newEntity, status: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem></SelectContent></Select></div>
+                 <div className="grid grid-cols-2 gap-4">
+                  <div><Label>{t('type')}</Label><Select value={newEntity.tipo} onValueChange={value => setNewEntity({...newEntity, tipo: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="publica">{t('public')}</SelectItem><SelectItem value="privada">{t('private')}</SelectItem><SelectItem value="ong">ONG</SelectItem><SelectItem value="associacao">{t('association')}</SelectItem></SelectContent></Select></div>
+                  <div><Label>{t('status')}</Label><Select value={newEntity.status} onValueChange={value => setNewEntity({...newEntity, status: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pendente">{t('pending')}</SelectItem><SelectItem value="activo">{t('active')}</SelectItem><SelectItem value="inactivo">{t('inactive')}</SelectItem><SelectItem value="bloqueado">{t('blocked')}</SelectItem></SelectContent></Select></div>
                 </div>
-                <div><Label>Telefone</Label><Input value={newEntity.telefone} onChange={e => setNewEntity({...newEntity, telefone: e.target.value})} placeholder="+244 9XX XXX XXX" /></div>
-                <DialogFooter><Button type="submit">Cadastrar</Button><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button></DialogFooter>
+                <div><Label>{t('phone')}</Label><Input value={newEntity.telefone} onChange={e => setNewEntity({...newEntity, telefone: e.target.value})} placeholder="+244 9XX XXX XXX" /></div>
+                <DialogFooter><Button type="submit">{t('register')}</Button><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>{t('cancel')}</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -454,36 +456,36 @@ const EntidadesPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Serviço</TableHead>
-                <TableHead>Província</TableHead>
-                <TableHead>Município</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead>{t('name')}</TableHead>
+                <TableHead>{t('type')}</TableHead>
+                <TableHead>{t('service')}</TableHead>
+                <TableHead>{t('province')}</TableHead>
+                <TableHead>{t('municipality')}</TableHead>
+                <TableHead>{t('status')}</TableHead>
+                <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="flex justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div><span className="ml-2">Carregando...</span></div></TableCell></TableRow>
-              : entidades.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center py-8">Nenhuma entidade encontrada.</TableCell></TableRow>
+              {loading ? <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="flex justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div><span className="ml-2">{t('loading')}</span></div></TableCell></TableRow>
+              : entidades.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center py-8">{t('no_entities_found')}</TableCell></TableRow>
               : entidades.map(entity => (
                 <TableRow key={entity.id}>
                   <TableCell>{entity.id}</TableCell>
                   <TableCell className="font-medium">{entity.nome}</TableCell>
-                  <TableCell>{entity.tipo === 'publica' ? 'Pública' : entity.tipo === 'privada' ? 'Privada' : entity.tipo === 'ong' ? 'ONG' : 'Associação'}</TableCell>
+                  <TableCell>{entity.tipo === 'publica' ? t('public') : entity.tipo === 'privada' ? t('private') : entity.tipo === 'ong' ? 'ONG' : t('association')}</TableCell>
                   <TableCell>{getServicoTipoLabel(entity.servico_tipo)}</TableCell>
                   <TableCell>{entity.provincia_nome || "-"}</TableCell>
                   <TableCell>{entity.municipio_nome || "-"}</TableCell>
                   <TableCell>{getStatusBadge(entity.status)}</TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedEntity(entity)}>Ver</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Detalhes da Entidade</DialogTitle></DialogHeader>
+                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedEntity(entity)}>{t('view')}</Button></DialogTrigger>
+                      <DialogContent><DialogHeader><DialogTitle>{t('entity_details')}</DialogTitle></DialogHeader>
                         <div className="space-y-2">
                           <div><b>ID:</b> {selectedEntity?.id}</div>
-                          <div><b>Nome:</b> {selectedEntity?.nome}</div>
-                          <div><b>Tipo:</b> {selectedEntity?.tipo === 'publica' ? 'Pública' : selectedEntity?.tipo === 'privada' ? 'Privada' : selectedEntity?.tipo === 'ong' ? 'ONG' : 'Associação'}</div>
-                          <div><b>Serviço:</b> {getServicoTipoLabel(selectedEntity?.servico_tipo)}</div>
-                          <div><b>Status:</b> {selectedEntity?.status}</div>
+                          <div><b>{t('name')}:</b> {selectedEntity?.nome}</div>
+                          <div><b>{t('type')}:</b> {selectedEntity?.tipo === 'publica' ? t('public') : selectedEntity?.tipo === 'privada' ? t('private') : selectedEntity?.tipo === 'ong' ? 'ONG' : t('association')}</div>
+                          <div><b>{t('service')}:</b> {getServicoTipoLabel(selectedEntity?.servico_tipo)}</div>
+                          <div><b>{t('status')}:</b> {selectedEntity?.status}</div>
                           <div><b>Email:</b> {selectedEntity?.email || "-"}</div>
                           <div><b>Telefone:</b> {selectedEntity?.telefone || "-"}</div>
                           <div><b>NIF:</b> {selectedEntity?.nif || "-"}</div>
@@ -493,41 +495,41 @@ const EntidadesPage = () => {
                           <div><b>Endereço:</b> {selectedEntity?.endereco_completo || "-"}</div>
                           <div><b>Responsável:</b> {selectedEntity?.responsavel || "-"}</div>
                           <div><b>Horário:</b> {selectedEntity?.horario_funcionamento || "-"}</div>
-                          <div><b>Capacidade:</b> {selectedEntity?.capacidade_pessoas || "-"} pessoas</div>
+                          <div><b>{t('capacity')}:</b> {selectedEntity?.capacidade_pessoas || "-"} {t('people')}</div>
                         </div>
-                        <DialogFooter><DialogClose asChild><Button variant="outline">Fechar</Button></DialogClose></DialogFooter>
+                        <DialogFooter><DialogClose asChild><Button variant="outline">{t('close')}</Button></DialogClose></DialogFooter>
                       </DialogContent>
                     </Dialog>
                     
                     <Dialog open={showEdit && editEntity?.id === entity.id} onOpenChange={setShowEdit}>
-                      <DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditEntity(entity); setShowEdit(true); }}>Editar</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Editar Entidade</DialogTitle></DialogHeader>
+                      <DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditEntity(entity); setShowEdit(true); }}>{t('edit')}</Button></DialogTrigger>
+                      <DialogContent><DialogHeader><DialogTitle>{t('edit_entity')}</DialogTitle></DialogHeader>
                         <form onSubmit={handleUpdateEntity} className="space-y-3">
                           <Input value={editEntity?.nome || ""} onChange={e => setEditEntity(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
                           <Input value={editEntity?.email || ""} onChange={e => setEditEntity(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
-                          <Input value={editEntity?.telefone || ""} onChange={e => setEditEntity(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" />
-                          <DialogFooter><Button type="submit">Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button></DialogClose></DialogFooter>
+                          <Input value={editEntity?.telefone || ""} onChange={e => setEditEntity(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder={t('phone')} />
+                          <DialogFooter><Button type="submit">{t('save')}</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>{t('cancel')}</Button></DialogClose></DialogFooter>
                         </form>
                       </DialogContent>
                     </Dialog>
                     
                     <Dialog open={showApprove && selectedEntity?.id === entity.id} onOpenChange={setShowApprove}>
-                      <DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedEntity(entity); setStatusToApprove(entity.status); }}>Status</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>Alterar Status</DialogTitle></DialogHeader>
+                      <DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedEntity(entity); setStatusToApprove(entity.status); }}>{t('status')}</Button></DialogTrigger>
+                      <DialogContent><DialogHeader><DialogTitle>{t('change_status')}</DialogTitle></DialogHeader>
                         <Select value={statusToApprove} onValueChange={setStatusToApprove}>
-                          <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t('status')} /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="activo">Ativo</SelectItem>
                             <SelectItem value="inactivo">Inativo</SelectItem>
                             <SelectItem value="pendente">Pendente</SelectItem>
-                            <SelectItem value="bloqueado">Bloqueado</SelectItem>
+                            <SelectItem value="bloqueado">{t('blocked')}</SelectItem>
                           </SelectContent>
                         </Select>
-                        <DialogFooter><Button onClick={handleStatusChange}>Salvar</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button></DialogClose></DialogFooter>
+                        <DialogFooter><Button onClick={handleStatusChange}>{t('save')}</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>{t('cancel')}</Button></DialogClose></DialogFooter>
                       </DialogContent>
                     </Dialog>
                     
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteEntity(entity.id)}>Remover</Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteEntity(entity.id)}>{t('remove')}</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -551,7 +553,7 @@ const EntidadesPage = () => {
         
         {meta && (
           <div className="mt-4 text-xs text-muted-foreground text-center">
-            Mostrando {meta.from} a {meta.to} de {meta.total} entidades
+            {t('showing_entities_count', { from: meta.from, to: meta.to, total: meta.total })}
           </div>
         )}
       </div>

@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -119,25 +120,25 @@ const statusColors: Record<string, string> = {
 const CHART_COLORS = ["#f43f5e", "#fb7185", "#fda4af", "#e11d48", "#9f1239", "#475569", "#64748b", "#94a3b8"];
 
 // Funções auxiliares DEFINIDAS ANTES de serem usadas
-const getStatusLabel = (status: string): string => {
+const getStatusLabel = (status: string, t: any): string => {
   const labels: Record<string, string> = {
-    'pendente': 'Pendente',
-    'em_analise': 'Em Análise',
-    'confirmado': 'Confirmado',
-    'em_andamento': 'Em Andamento',
-    'resolvido': 'Resolvido',
-    'encerrado': 'Encerrado',
-    'cancelado': 'Cancelado'
+    'pendente': t('pending'),
+    'em_analise': t('under_analysis'),
+    'confirmado': t('confirmed'),
+    'em_andamento': t('in_progress'),
+    'resolvido': t('resolved'),
+    'encerrado': t('closed'),
+    'cancelado': t('cancelled')
   };
   return labels[status] || status;
 };
 
-const getSeverityLabel = (severity: string): string => {
+const getSeverityLabel = (severity: string, t: any): string => {
   const labels: Record<string, string> = {
-    'critical': 'Crítico',
-    'high': 'Alto',
-    'medium': 'Médio',
-    'low': 'Baixo'
+    'critical': t('critical'),
+    'high': t('high'),
+    'medium': t('medium'),
+    'low': t('low')
   };
   return labels[severity] || severity;
 };
@@ -169,6 +170,7 @@ const mapSeverity = (status: string): string => {
 };
 
 const RelatoriosPage = () => {
+  const { t } = useTranslation();
   const [incidentes, setIncidentes] = useState<Incidente[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -211,7 +213,7 @@ const RelatoriosPage = () => {
       setIncidentes(mappedData);
     } catch (error) {
       console.error("Erro ao carregar incidentes:", error);
-      toast.error("Erro ao carregar dados dos relatórios");
+      toast.error(t('loading_error'));
       setIncidentes([]);
     } finally {
       setLoading(false);
@@ -275,7 +277,7 @@ const RelatoriosPage = () => {
   const chartDataByStatus = useMemo(() => {
     const statusCount: Record<string, number> = {};
     filtered.forEach(c => {
-      const label = getStatusLabel(c.status);
+      const label = getStatusLabel(c.status, t);
       statusCount[label] = (statusCount[label] || 0) + 1;
     });
     return Object.entries(statusCount).map(([name, value]) => ({
@@ -302,8 +304,8 @@ const RelatoriosPage = () => {
       "ID": c.id,
       "Título": c.title,
       "Tipo": c.type,
-      "Severidade": getSeverityLabel(c.severity),
-      "Estado": getStatusLabel(c.status),
+      "Severidade": getSeverityLabel(c.severity, t),
+      "Estado": getStatusLabel(c.status, t),
       "Região": c.region,
       "Província": c.province,
       "Data Reportada": new Date(c.reportedAt).toLocaleDateString("pt-PT"),
@@ -437,7 +439,7 @@ const RelatoriosPage = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Carregando relatórios...</p>
+            <p className="text-muted-foreground">{t('loading')}...</p>
           </div>
         </div>
       </AppLayout>
@@ -452,10 +454,10 @@ const RelatoriosPage = () => {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                Relatórios e Métricas
+                {t('reports_metrics')}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Análise consolidada de impacto e resposta a emergências
+                {t('reports_subtitle')}
               </p>
             </div>
             <div className="flex gap-3">
@@ -463,7 +465,7 @@ const RelatoriosPage = () => {
                 <DropdownMenuTrigger asChild>
                   <Button size="lg" className="gap-2 bg-rose-600 hover:bg-rose-700 shadow-sm transition-all duration-200">
                     <Download className="h-4 w-4" />
-                    Exportar Dados
+                    {t('export_data')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -492,7 +494,7 @@ const RelatoriosPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Ocorrências</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t('total_occurrences')}</p>
                   <p className="text-3xl font-bold">{filtered.length}</p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-rose-50 flex items-center justify-center">
@@ -506,7 +508,7 @@ const RelatoriosPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Pessoas Afetadas</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t('affected_people')}</p>
                   <p className="text-3xl font-bold">{totalAffected.toLocaleString()}</p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-slate-50 flex items-center justify-center">
@@ -520,7 +522,7 @@ const RelatoriosPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Voluntários</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{t('volunteers')}</p>
                   <p className="text-3xl font-bold">{totalVolunteers}</p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-emerald-50 flex items-center justify-center">
@@ -534,7 +536,7 @@ const RelatoriosPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-xs font-semibold text-rose-100 uppercase tracking-wider mb-1">Crises Críticas</p>
+                  <p className="text-xs font-semibold text-rose-100 uppercase tracking-wider mb-1">{t('critical_crises')}</p>
                   <p className="text-3xl font-bold">{criticalCrises}</p>
                 </div>
                 <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
@@ -549,9 +551,9 @@ const RelatoriosPage = () => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
-            <TabsTrigger value="lista" className="gap-2"><FileText className="h-4 w-4" />Lista de Crises</TabsTrigger>
-            <TabsTrigger value="graficos" className="gap-2"><BarChart3 className="h-4 w-4" />Análise Gráfica</TabsTrigger>
-            <TabsTrigger value="resumo" className="gap-2"><LucidePieChart className="h-4 w-4" />Resumo Executivo</TabsTrigger>
+            <TabsTrigger value="lista" className="gap-2"><FileText className="h-4 w-4" />{t('crisis_list')}</TabsTrigger>
+            <TabsTrigger value="graficos" className="gap-2"><BarChart3 className="h-4 w-4" />{t('graphical_analysis')}</TabsTrigger>
+            <TabsTrigger value="resumo" className="gap-2"><LucidePieChart className="h-4 w-4" />{t('executive_summary')}</TabsTrigger>
           </TabsList>
 
           {/* Tab Lista */}
@@ -559,52 +561,52 @@ const RelatoriosPage = () => {
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm mb-6">
               <div className="flex items-center gap-2 mb-6">
                 <div className="h-8 w-1 bg-rose-500 rounded-full" />
-                <h3 className="font-bold text-lg">Filtros de Pesquisa</h3>
+                <h3 className="font-bold text-lg">{t('search_filters')}</h3>
                 {hasFilters && (
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="ml-auto text-rose-600 hover:text-rose-700 hover:bg-rose-50">
-                    Limpar Filtros
+                    {t('clear_filters')}
                   </Button>
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="relative lg:col-span-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Filtrar por título..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-muted/30 border-muted-foreground/10 focus-visible:ring-rose-500" />
+                  <Input placeholder={t('filter_by_title')} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-muted/30 border-muted-foreground/10 focus-visible:ring-rose-500" />
                 </div>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Tipo de Crise" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder={t('crisis_type')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    <SelectItem value="all">{t('all_types')}</SelectItem>
                     {[...new Set(incidentes.map(c => c.type))].filter(t => t !== "Não categorizado").map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Severidade" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder={t('severity')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas severidades</SelectItem>
-                    <SelectItem value="critical">Crítico</SelectItem>
-                    <SelectItem value="high">Alto</SelectItem>
-                    <SelectItem value="medium">Médio</SelectItem>
-                    <SelectItem value="low">Baixo</SelectItem>
+                    <SelectItem value="all">{t('all_severities')}</SelectItem>
+                    <SelectItem value="critical">{t('critical')}</SelectItem>
+                    <SelectItem value="high">{t('high')}</SelectItem>
+                    <SelectItem value="medium">{t('medium')}</SelectItem>
+                    <SelectItem value="low">{t('low')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Estado" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder={t('status')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos estados</SelectItem>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="em_analise">Em Análise</SelectItem>
-                    <SelectItem value="confirmado">Confirmado</SelectItem>
-                    <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                    <SelectItem value="resolvido">Resolvido</SelectItem>
+                    <SelectItem value="all">{t('all_statuses')}</SelectItem>
+                    <SelectItem value="pendente">{t('pending')}</SelectItem>
+                    <SelectItem value="em_analise">{t('under_analysis')}</SelectItem>
+                    <SelectItem value="confirmado">{t('confirmed')}</SelectItem>
+                    <SelectItem value="em_andamento">{t('in_progress')}</SelectItem>
+                    <SelectItem value="resolvido">{t('resolved')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={provinceFilter} onValueChange={setProvinceFilter}>
-                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder="Província" /></SelectTrigger>
+                  <SelectTrigger className="bg-muted/30 border-muted-foreground/10"><SelectValue placeholder={t('province')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas províncias</SelectItem>
+                    <SelectItem value="all">{t('all_provinces')}</SelectItem>
                     {provinces.map((p) => (
                       <SelectItem key={p} value={p}>{p}</SelectItem>
                     ))}
@@ -618,20 +620,20 @@ const RelatoriosPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                      <TableHead className="font-semibold text-slate-700">Título</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Tipo</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Severidade</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Estado</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Município</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Província</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Data</TableHead>
-                      <TableHead className="text-right font-semibold text-slate-700">Afetados</TableHead>
-                      <TableHead className="text-right font-semibold text-slate-700">Voluntários</TableHead>
+                      <TableHead className="font-semibold text-slate-700">{t('title')}</TableHead>
+                      <TableHead className="font-semibold text-slate-700">{t('type')}</TableHead>
+                      <TableHead className="font-semibold text-slate-700">{t('severity')}</TableHead>
+                      <TableHead className="font-semibold text-slate-700">{t('status')}</TableHead>
+                      <TableHead className="font-semibold text-slate-700">{t('municipality')}</TableHead>
+                      <TableHead className="font-semibold text-slate-700">{t('province')}</TableHead>
+                      <TableHead className="font-semibold text-slate-700">{t('date')}</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-700">{t('affected')}</TableHead>
+                      <TableHead className="text-right font-semibold text-slate-700">{t('volunteers')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currentItems.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">Nenhuma ocorrência encontrada.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">{t('no_occurrences_found')}</TableCell></TableRow>
                     ) : (
                       currentItems.map((crisis) => (
                         <TableRow key={crisis.id} className="hover:bg-gray-50 transition-colors">
@@ -639,13 +641,13 @@ const RelatoriosPage = () => {
                           <TableCell><span className="text-sm">{crisis.type}</span></TableCell>
                           <TableCell>
                             <Badge className={severityColors[crisis.severity]}>
-                              {getSeverityLabel(crisis.severity)}
+                              {getSeverityLabel(crisis.severity, t)}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`font-medium ${statusColors[crisis.status]}`}>
                               <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" />
-                              {getStatusLabel(crisis.status)}
+                              {getStatusLabel(crisis.status, t)}
                             </Badge>
                           </TableCell>
                           <TableCell>{crisis.region}</TableCell>
@@ -670,7 +672,7 @@ const RelatoriosPage = () => {
               {totalPages > 1 && (
                 <div className="px-6 py-4 flex items-center justify-between border-t border-border bg-slate-50/30">
                   <div className="text-xs text-muted-foreground">
-                    A mostrar <span className="font-medium text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> de <span className="font-medium text-foreground">{filtered.length}</span> resultados
+                    {t('showing_results_count', { from: (currentPage - 1) * itemsPerPage + 1, to: Math.min(currentPage * itemsPerPage, filtered.length), total: filtered.length })}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -723,11 +725,11 @@ const RelatoriosPage = () => {
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                    Total afetados: <span className="font-semibold text-foreground">{totalAffected.toLocaleString()}</span>
+                    {t('total_affected')}: <span className="font-semibold text-foreground">{totalAffected.toLocaleString()}</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Voluntários: <span className="font-semibold text-foreground">{totalVolunteers}</span>
+                    {t('volunteers')}: <span className="font-semibold text-foreground">{totalVolunteers}</span>
                   </span>
                 </div>
                 <div className="text-[10px] uppercase tracking-wider font-semibold opacity-50">
@@ -742,7 +744,7 @@ const RelatoriosPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="rounded-2xl shadow-sm border-border/60">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-slate-800">Distribuição por Tipo</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-800">{t('distribution_by_type')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80 relative">
@@ -781,7 +783,7 @@ const RelatoriosPage = () => {
               </Card>
               <Card className="rounded-2xl shadow-sm border-border/60">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold text-slate-800">Status das Ocorrências</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-800">{t('occurrence_status')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">

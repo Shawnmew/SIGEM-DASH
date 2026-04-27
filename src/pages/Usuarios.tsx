@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { 
   Filter, 
   MoreHorizontal, 
@@ -85,6 +86,7 @@ interface NewUser {
 
 const UsuariosPage = () => {
   const { user: currentUser, loading: authLoading, isAdmin } = useAuth();
+  const { t } = useTranslation();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,7 +124,7 @@ const UsuariosPage = () => {
   const [loadingNif, setLoadingNif] = useState(false);
 
   if (!authLoading && !isAdmin) {
-    toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
+    toast.error(t('access_denied'));
     return <Navigate to="/" replace />;
   }
 
@@ -134,7 +136,7 @@ const UsuariosPage = () => {
       setMunicipios(response.data.data || []);
     } catch (error) {
       console.error("Erro ao carregar municípios:", error);
-      toast.error("Erro ao carregar municípios");
+      toast.error(t('select_municipality')); // Fallback error
     } finally {
       setLoadingMunicipios(false);
     }
@@ -180,10 +182,9 @@ const UsuariosPage = () => {
       setUsuarios(usersArray);
       setMeta(metaData);
     } catch (e) {
-      console.error("Erro ao carregar usuários:", e);
       setUsuarios([]);
       setMeta(null);
-      toast.error("Erro ao carregar usuários");
+      toast.error(t('loading')); // Fallback
     } finally {
       setLoading(false);
     }
@@ -387,11 +388,11 @@ const UsuariosPage = () => {
       removido: "bg-red-500 text-white"
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[status] || config.pendente}`}>
-      {status === 'activo' ? 'Ativo' : 
-       status === 'inactivo' ? 'Inativo' : 
-       status === 'bloqueado' ? 'Bloqueado' : 
-       status === 'suspenso' ? 'Suspenso' :
-       status === 'removido' ? 'Removido' : 'Pendente'}
+      {status === 'activo' ? t('active') : 
+       status === 'inactivo' ? t('inactive') : 
+       status === 'bloqueado' ? t('blocked') : 
+       status === 'suspenso' ? t('suspended') :
+       status === 'removido' ? t('removed') : t('pending')}
     </span>;
   };
 
@@ -403,7 +404,7 @@ const UsuariosPage = () => {
       cidadao: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-400"
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${config[tipo] || config.cidadao}`}>
-      {tipo === 'admin' ? 'Admin' : tipo === 'operador' ? 'Operador' : tipo === 'voluntario' ? 'Voluntário' : 'Cidadão'}
+      {tipo === 'admin' ? t('admin') : tipo === 'operador' ? t('operator') : tipo === 'voluntario' ? t('volunteer') : t('citizen')}
     </span>;
   };
 
@@ -423,10 +424,10 @@ const UsuariosPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
-              Usuários
-              <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 px-2 py-1 rounded-full">Admin</span>
+              {t('users')}
+              <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 px-2 py-1 rounded-full">{t('admin')}</span>
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Gestão de usuários do sistema</p>
+            <p className="text-sm text-muted-foreground mt-1">{t('user_management')}</p>
           </div>
           <span className="text-xs text-muted-foreground">Total: {meta?.total || 0} usuários</span>
         </div>
@@ -436,42 +437,42 @@ const UsuariosPage = () => {
         <div className="flex flex-wrap gap-2 mb-4 items-center justify-between">
           <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
             <Input 
-              placeholder="Buscar por nome, email ou telefone..." 
+              placeholder={t('search_user_placeholder')} 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
               className="w-64" 
             />
             <Select value={tipo} onValueChange={value => { setTipo(value); setPage(1); }}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Tipo" /></SelectTrigger>
+              <SelectTrigger className="w-36"><SelectValue placeholder={t('type')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="operador">Operador</SelectItem>
-                <SelectItem value="voluntario">Voluntário</SelectItem>
-                <SelectItem value="cidadao">Cidadão</SelectItem>
+                <SelectItem value="all">{t('all')}</SelectItem>
+                <SelectItem value="admin">{t('admin')}</SelectItem>
+                <SelectItem value="operador">{t('operator')}</SelectItem>
+                <SelectItem value="voluntario">{t('volunteer')}</SelectItem>
+                <SelectItem value="cidadao">{t('citizen')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={status} onValueChange={value => { setStatus(value); setPage(1); }}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="w-36"><SelectValue placeholder={t('status')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="activo">Ativo</SelectItem>
-                <SelectItem value="inactivo">Inativo</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="suspenso">Suspenso</SelectItem>
-                <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                <SelectItem value="removido">Removido</SelectItem>
+                <SelectItem value="all">{t('all')}</SelectItem>
+                <SelectItem value="activo">{t('active')}</SelectItem>
+                <SelectItem value="inactivo">{t('inactive')}</SelectItem>
+                <SelectItem value="pendente">{t('pending')}</SelectItem>
+                <SelectItem value="suspenso">{t('suspended')}</SelectItem>
+                <SelectItem value="bloqueado">{t('blocked')}</SelectItem>
+                <SelectItem value="removido">{t('removed')}</SelectItem>
               </SelectContent>
             </Select>
-            <Button type="submit">Buscar</Button>
+            <Button type="submit">{t('verify')}</Button>
           </form>
           
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
-              <Button className="bg-primary">+ Novo Usuário</Button>
+              <Button className="bg-primary">+ {t('new_user')}</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Cadastrar Novo Usuário</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t('create_user_title')}</DialogTitle></DialogHeader>
               <form onSubmit={handleCreateUser} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">
                   <div className="relative">
@@ -504,8 +505,8 @@ const UsuariosPage = () => {
                 <div><Label>Confirmar Senha *</Label><Input type="password" value={newUser.password_confirmation} onChange={e => setNewUser({...newUser, password_confirmation: e.target.value})} className={formErrors.password_confirmation ? "border-red-500" : ""} />{formErrors.password_confirmation && <p className="text-xs text-red-500">{formErrors.password_confirmation}</p>}</div>
                 <div><Label>Telefone</Label><Input value={newUser.telefone} onChange={e => setNewUser({...newUser, telefone: e.target.value})} placeholder="+244 9XX XXX XXX" /></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Tipo *</Label><Select value={newUser.tipo} onValueChange={value => setNewUser({...newUser, tipo: value})}><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent><SelectItem value="admin">Administrador</SelectItem><SelectItem value="operador">Operador</SelectItem><SelectItem value="voluntario">Voluntário</SelectItem><SelectItem value="cidadao">Cidadão</SelectItem></SelectContent></Select>{formErrors.tipo && <p className="text-xs text-red-500">{formErrors.tipo}</p>}</div>
-                  <div><Label>Status</Label><Select value={newUser.status} onValueChange={value => setNewUser({...newUser, status: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="activo">Ativo</SelectItem><SelectItem value="inactivo">Inativo</SelectItem><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="bloqueado">Bloqueado</SelectItem></SelectContent></Select></div>
+                  <div><Label>{t('type')} *</Label><Select value={newUser.tipo} onValueChange={value => setNewUser({...newUser, tipo: value})}><SelectTrigger><SelectValue placeholder={t('type')} /></SelectTrigger><SelectContent><SelectItem value="admin">{t('admin')}</SelectItem><SelectItem value="operador">{t('operator')}</SelectItem><SelectItem value="voluntario">{t('volunteer')}</SelectItem><SelectItem value="cidadao">{t('citizen')}</SelectItem></SelectContent></Select>{formErrors.tipo && <p className="text-xs text-red-500">{formErrors.tipo}</p>}</div>
+                  <div><Label>{t('status')}</Label><Select value={newUser.status} onValueChange={value => setNewUser({...newUser, status: value})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="activo">{t('active')}</SelectItem><SelectItem value="inactivo">{t('inactive')}</SelectItem><SelectItem value="pendente">{t('pending')}</SelectItem><SelectItem value="bloqueado">{t('blocked')}</SelectItem></SelectContent></Select></div>
                 </div>
                 <div><Label>Município</Label>
                   <Select value={newUser.municipio_id || "none"} onValueChange={value => setNewUser({...newUser, municipio_id: value === "none" ? "" : value})}>
@@ -516,7 +517,7 @@ const UsuariosPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <DialogFooter><Button type="submit">Cadastrar</Button><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button></DialogFooter>
+                <DialogFooter><Button type="submit">{t('register_btn')}</Button><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>{t('cancel')}</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -584,35 +585,35 @@ const UsuariosPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuLabel>{t('actions')}</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           
                           <DropdownMenuItem onClick={() => { setSelectedUser(usuario); setShowDetails(true); }}>
                             <Eye className="mr-2 h-4 w-4" />
-                            <span>Ver Detalhes</span>
+                            <span>{t('view_details')}</span>
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem onClick={() => { setEditUser(usuario); setShowEdit(true); }}>
                             <Edit className="mr-2 h-4 w-4" />
-                            <span>Editar</span>
+                            <span>{t('edit')}</span>
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem onClick={() => { setSelectedUser(usuario); setStatusToApprove(usuario.status); setShowApprove(true); }}>
                             <Settings className="mr-2 h-4 w-4" />
-                            <span>Alterar Status</span>
+                            <span>{t('change_status')}</span>
                           </DropdownMenuItem>
                           
                           {usuario.tipo === 'cidadao' && (
                             <DropdownMenuItem onClick={() => { setSelectedUser(usuario); setShowPenalize(true); }} className="text-orange-600 focus:text-orange-600">
                               <AlertTriangle className="mr-2 h-4 w-4" />
-                              <span>Penalizar</span>
+                              <span>{t('penalize')}</span>
                             </DropdownMenuItem>
                           )}
 
                           {['suspenso', 'removido', 'bloqueado', 'inactivo'].includes(usuario.status) && (
                             <DropdownMenuItem onClick={() => handleRecoverUser(usuario.id)} className="text-green-600 focus:text-green-600">
                               <RefreshCcw className="mr-2 h-4 w-4" />
-                              <span>Recuperar Conta</span>
+                              <span>{t('recover_account')}</span>
                             </DropdownMenuItem>
                           )}
                           
@@ -621,7 +622,7 @@ const UsuariosPage = () => {
                           {currentUser?.id !== usuario.id && (
                             <DropdownMenuItem onClick={() => handleDeleteUser(usuario.id)} className="text-red-600 focus:text-red-600 font-medium">
                               <Trash className="mr-2 h-4 w-4" />
-                              <span>Remover</span>
+                              <span>{t('remove')}</span>
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -637,7 +638,7 @@ const UsuariosPage = () => {
         {/* Modais fora do loop para melhor performance */}
         <Dialog open={showDetails} onOpenChange={setShowDetails}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Detalhes do Usuário</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('user_details')}</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
@@ -655,66 +656,66 @@ const UsuariosPage = () => {
                   <p className="text-sm font-medium">{selectedUser?.id}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Telefone</p>
+                  <p className="text-xs text-muted-foreground">{t('phone')}</p>
                   <p className="text-sm font-medium">{selectedUser?.telefone || "-"}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Tipo de Conta</p>
+                  <p className="text-xs text-muted-foreground">{t('type')}</p>
                   <div>{selectedUser && getTipoBadge(selectedUser.tipo || "cidadao")}</div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-xs text-muted-foreground">{t('status')}</p>
                   <div>{selectedUser && getStatusBadge(selectedUser.status)}</div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Reputação</p>
+                  <p className="text-xs text-muted-foreground">{t('reputation')}</p>
                   <p className="text-sm font-bold text-primary">{Math.round((selectedUser?.reputation_score || 0) * 100)}%</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Membro desde</p>
+                  <p className="text-xs text-muted-foreground">{t('member_since')}</p>
                   <p className="text-sm font-medium">{selectedUser?.created_at ? new Date(selectedUser.created_at).toLocaleDateString() : "-"}</p>
                 </div>
               </div>
             </div>
-            <DialogFooter><Button variant="outline" onClick={() => setShowDetails(false)}>Fechar</Button></DialogFooter>
+            <DialogFooter><Button variant="outline" onClick={() => setShowDetails(false)}>{t('close')}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog open={showEdit} onOpenChange={setShowEdit}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('edit_user')}</DialogTitle></DialogHeader>
             <form onSubmit={handleUpdateUser} className="space-y-3 pt-4">
               <div className="space-y-1">
-                <Label>Nome</Label>
-                <Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
+                <Label>{t('name')}</Label>
+                <Input value={editUser?.nome || ""} onChange={e => setEditUser(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder={t('name')} />
               </div>
               <div className="space-y-1">
-                <Label>Sobrenome</Label>
-                <Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder="Sobrenome" />
+                <Label>{t('last_name')}</Label>
+                <Input value={editUser?.sobrenome || ""} onChange={e => setEditUser(prev => prev ? {...prev, sobrenome: e.target.value} : null)} placeholder={t('last_name')} />
               </div>
               <div className="space-y-1">
                 <Label>Email</Label>
                 <Input type="email" value={editUser?.email || ""} onChange={e => setEditUser(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
               </div>
               <div className="space-y-1">
-                <Label>Telefone</Label>
-                <Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder="Telefone" />
+                <Label>{t('phone')}</Label>
+                <Input value={editUser?.telefone || ""} onChange={e => setEditUser(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder={t('phone')} />
               </div>
               <div className="space-y-1">
-                <Label>Tipo</Label>
+                <Label>{t('type')}</Label>
                 <Select value={editUser?.tipo || "cidadao"} onValueChange={value => setEditUser(prev => prev ? {...prev, tipo: value} : null)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="operador">Operador</SelectItem>
-                    <SelectItem value="voluntario">Voluntário</SelectItem>
-                    <SelectItem value="cidadao">Cidadão</SelectItem>
+                    <SelectItem value="operador">{t('operator')}</SelectItem>
+                    <SelectItem value="voluntario">{t('volunteer')}</SelectItem>
+                    <SelectItem value="cidadao">{t('citizen')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <DialogFooter className="pt-4">
-                <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
-                <Button type="submit">Salvar Alterações</Button>
+                <Button variant="outline" onClick={() => setShowEdit(false)}>{t('cancel')}</Button>
+                <Button type="submit">{t('save_changes')}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -722,30 +723,30 @@ const UsuariosPage = () => {
 
         <Dialog open={showApprove} onOpenChange={setShowApprove}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Alterar Status da Conta</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('change_status_title')}</DialogTitle></DialogHeader>
             <div className="py-4 space-y-4">
               <div className="bg-muted p-3 rounded-md">
-                <p className="text-sm">Usuário: <b>{selectedUser?.nome} {selectedUser?.sobrenome}</b></p>
-                <p className="text-xs text-muted-foreground mt-1">Status atual: {selectedUser?.status}</p>
+                <p className="text-sm">{t('user')}: <b>{selectedUser?.nome} {selectedUser?.sobrenome}</b></p>
+                <p className="text-xs text-muted-foreground mt-1">{t('current_status')}: {selectedUser?.status}</p>
               </div>
               <div className="space-y-2">
-                <Label>Novo Status</Label>
+                <Label>{t('new_status')}</Label>
                 <Select value={statusToApprove} onValueChange={setStatusToApprove}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o novo status" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t('select_status')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="activo">Ativo</SelectItem>
-                    <SelectItem value="inactivo">Inativo</SelectItem>
-                    <SelectItem value="bloqueado">Bloqueado</SelectItem>
-                    <SelectItem value="suspenso">Suspenso</SelectItem>
-                    <SelectItem value="removido">Removido</SelectItem>
-                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="activo">{t('active')}</SelectItem>
+                    <SelectItem value="inactivo">{t('inactive')}</SelectItem>
+                    <SelectItem value="bloqueado">{t('blocked')}</SelectItem>
+                    <SelectItem value="suspenso">{t('suspended')}</SelectItem>
+                    <SelectItem value="removido">{t('removed')}</SelectItem>
+                    <SelectItem value="pendente">{t('pending')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowApprove(false)}>Cancelar</Button>
-              <Button onClick={handleStatusChange}>Confirmar Mudança</Button>
+              <Button variant="outline" onClick={() => setShowApprove(false)}>{t('cancel')}</Button>
+              <Button onClick={handleStatusChange}>{t('confirm_change')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -755,17 +756,17 @@ const UsuariosPage = () => {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-orange-500" />
-                Penalizar Usuário
+                {t('penalize_user')}
               </DialogTitle>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <p className="text-sm text-muted-foreground">
-                Esta ação reduzirá a reputação de <b>{selectedUser?.nome}</b> e poderá resultar em suspensão automática se o score atingir 0%.
+                {t('penalize_warning', { name: selectedUser?.nome })}
               </p>
               <div className="space-y-2">
-                <Label>Motivo da Penalização</Label>
+                <Label>{t('penalty_reason')}</Label>
                 <Textarea 
-                  placeholder="Descreva o motivo (ex: Reporte falso repetitivo, má conduta...)" 
+                   placeholder={t('penalty_reason_placeholder')} 
                   value={penaltyReason} 
                   onChange={e => setPenaltyReason(e.target.value)} 
                   className="min-h-[100px]"
@@ -773,8 +774,8 @@ const UsuariosPage = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPenalize(false)}>Cancelar</Button>
-              <Button variant="destructive" onClick={handlePenalizeUser}>Aplicar Penalização</Button>
+              <Button variant="outline" onClick={() => setShowPenalize(false)}>{t('cancel')}</Button>
+              <Button variant="destructive" onClick={handlePenalizeUser}>{t('apply_penalty')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -813,7 +814,7 @@ const UsuariosPage = () => {
         
         {meta && (
           <div className="mt-4 text-xs text-muted-foreground text-center">
-            Mostrando {meta.from} a {meta.to} de {meta.total} usuários
+            {t('showing_users_count', { from: meta.from, to: meta.to, total: meta.total })}
           </div>
         )}
       </div>

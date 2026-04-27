@@ -152,14 +152,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 toast.success(`Bem-vindo, ${userData.nome}!`);
                 return true;
             } else {
-                toast.error(response.data.message || 'Erro ao fazer login');
+                toast.error(response.data.message || 'Credenciais inválidas');
                 return false;
             }
         } catch (error: any) {
             console.error('signIn - Erro:', error.response?.status, error.response?.data);
-            const message = error.response?.data?.message || 'Erro ao fazer login';
+            const message = error.response?.data?.message || error.message || 'Erro ao fazer login';
             toast.error(message);
-            return false;
+            throw error; // Re-throw to allow component-level error handling
         }
     };
 

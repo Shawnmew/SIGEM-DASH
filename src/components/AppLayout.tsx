@@ -5,6 +5,7 @@ import { AccessibilityMenu } from '@/components/AccessibilityMenu';
 import { SkipToContent } from '@/components/SkipToContent';
 import { LiveAnnouncerProvider, useLiveAnnouncer } from '@/components/LiveAnnouncer';
 import { useLocation } from 'react-router-dom';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 function AppLayoutContent({ children }: { children: ReactNode }) {
     const { announce } = useLiveAnnouncer();
@@ -40,6 +41,7 @@ function AppLayoutContent({ children }: { children: ReactNode }) {
             >
                 <div className="p-4 lg:p-6 max-w-7xl mx-auto">
                     <div className="fixed bottom-4 right-4 z-50 flex gap-2">
+                        <LanguageSwitcher />
                         <AccessibilityMenu />
                         <SoundAlertToggle variant="button" className="shadow-lg" />
                     </div>

@@ -50,23 +50,34 @@ const playBeep = () => {
 };
 
 /**
- * Play a critical alert sound using HTML5 Audio (if file exists)
+ * Load and play audio using Blob to avoid cache issues
+ */
+const loadAndPlay = async (path: string, volume: number = 0.5) => {
+    try {
+        const response = await fetch(path);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.volume = volume;
+        
+        await audio.play();
+        
+        // Cleanup URL after play finishes
+        audio.onended = () => URL.revokeObjectURL(url);
+    } catch (error) {
+        console.warn(`Falha ao carregar som de ${path}, usando beep:`, error);
+        playBeep();
+    }
+};
+
+/**
+ * Play a critical alert sound
  */
 const playCriticalSound = () => {
     if (!enabled) return;
-
-    try {
-        // Try to load external sound file
-        const audio = new Audio('/sounds/alert-critical.mp3');
-        audio.volume = 0.7;
-        audio.play().catch((error) => {
-            // If file not found or autoplay blocked, fallback to beep
-            console.warn('Falha ao reproduzir áudio, usando beep:', error);
-            playBeep();
-        });
-    } catch (e) {
-        playBeep();
-    }
+    loadAndPlay('/sounds/alert-critical.mp3', 0.7);
 };
 
 /**
@@ -74,14 +85,7 @@ const playCriticalSound = () => {
  */
 const playUrgentSound = () => {
     if (!enabled) return;
-
-    try {
-        const audio = new Audio('/sounds/alert-urgent.mp3');
-        audio.volume = 0.5;
-        audio.play().catch(() => playBeep());
-    } catch (e) {
-        playBeep();
-    }
+    loadAndPlay('/sounds/alert-urgent.mp3', 0.5);
 };
 
 /**
@@ -125,5 +129,7 @@ export const playAlertSound = (type: 'critico' | 'urgente' | 'aviso' | 'informat
 // Initialize on first user interaction
 export const initSoundService = () => {
     // Preload audio context on first user click (handled in initAudioContext)
-    document.addEventListener('click', () => initAudioContext(), { once: true });
-};
+    document.addEventListener('click', () => {
+        initAudioContext();
+    }, { once: true });
+};

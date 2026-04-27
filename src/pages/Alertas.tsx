@@ -371,8 +371,12 @@ const AlertasPage = () => {
         return `${days} d atrás`;
     };
 
-    const getTimeRemaining = (expiraEm: string) => {
-        const diff = new Date(expiraEm).getTime() - Date.now();
+    const getTimeRemaining = (expiraEm: string | null) => {
+        if (!expiraEm) return "Nunca";
+        const expDate = new Date(expiraEm);
+        if (isNaN(expDate.getTime())) return "Nunca";
+        
+        const diff = expDate.getTime() - Date.now();
         const minutes = Math.floor(diff / 60000);
         if (minutes <= 0) return "Expirado";
         if (minutes < 60) return `${minutes} min`;
@@ -760,8 +764,11 @@ const AlertasPage = () => {
                                                         <td className="p-3">{getPrioridadeBadge(item.alerta?.prioridade)}</td>
                                                         <td className="p-3">{getRespostaBadge(item.resposta)}</td>
                                                         <td className="p-3">
-                                                            <span className={`text-xs ${new Date(item.alerta?.expira_em) < new Date() ? 'text-red-500' : 'text-orange-500'}`}>
-                                                                {getTimeRemaining(item.alerta?.expira_em)}
+                                                            <span className={`text-xs ${
+                                                                !item.alerta?.expira_em ? 'text-green-500' :
+                                                                new Date(item.alerta?.expira_em) < new Date() ? 'text-red-500' : 'text-orange-500'
+                                                            }`}>
+                                                                {item.alerta?.expira_em ? getTimeRemaining(item.alerta?.expira_em) : "Nunca"}
                                                             </span>
                                                         </td>
                                                         <td className="p-3">

@@ -6,6 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Loader2, Search, MapPin, AlertTriangle, ArrowRight, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,13 +57,13 @@ const getStatusColor = (status: string) => {
     }
 };
 
-const getStatusLabel = (status: string) => {
+const getStatusLabel = (status: string, t: any) => {
     switch (status) {
-        case 'critico': return 'Crítico';
-        case 'em_andamento': return 'Em Andamento';
-        case 'confirmado': return 'Confirmado';
-        case 'pendente': return 'Pendente';
-        case 'resolvido': return 'Resolvido';
+        case 'critico': return t('critical');
+        case 'em_andamento': return t('in_progress');
+        case 'confirmado': return t('confirmed');
+        case 'pendente': return t('pending');
+        case 'resolvido': return t('resolved_status');
         default: return status;
     }
 };
@@ -88,6 +89,7 @@ const MapController = ({ center, zoom }: { center: [number, number], zoom: numbe
 };
 
 const MapaPage = () => {
+    const { t } = useTranslation();
     const [incidentes, setIncidentes] = useState<Incidente[]>([]);
     const [loading, setLoading] = useState(true);
     const [center, setCenter] = useState<[number, number]>([-12.3, 17.5]);
@@ -110,7 +112,7 @@ const MapaPage = () => {
             setIncidentes(activeIncidentes);
         } catch (error) {
             console.error("Erro ao carregar incidentes:", error);
-            toast.error("Erro ao carregar incidentes no mapa");
+            toast.error(t('loading'));
         } finally {
             setLoading(false);
         }
@@ -147,10 +149,10 @@ const MapaPage = () => {
                     <div>
                         <h1 className="text-xl font-bold flex items-center gap-2">
                             <MapPin className="h-5 w-5 text-red-500" />
-                            Centro de Comando Geográfico
+                            {t('geo_command_center')}
                         </h1>
                         <p className="text-sm text-muted-foreground hidden sm:block">
-                            Monitoramento em tempo real de {filteredIncidentes.length} incidentes
+                            {t('real_time_monitoring', { count: filteredIncidentes.length })}
                         </p>
                     </div>
 
@@ -158,7 +160,7 @@ const MapaPage = () => {
                         <div className="relative w-full sm:w-64">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                             <Input
-                                placeholder="Procurar local ou título..."
+                                placeholder={t('search_map_placeholder')}
                                 className="pl-9 h-9"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -167,14 +169,14 @@ const MapaPage = () => {
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
                             <SelectTrigger className="w-[150px] h-9">
                                 <Filter className="h-4 w-4 mr-2 text-gray-500" />
-                                <SelectValue placeholder="Status" />
+                                <SelectValue placeholder={t('status')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="todos">Todos os Ativos</SelectItem>
-                                <SelectItem value="critico">Crítico</SelectItem>
-                                <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                                <SelectItem value="confirmado">Confirmado</SelectItem>
-                                <SelectItem value="pendente">Pendente</SelectItem>
+                                <SelectItem value="todos">{t('all_active')}</SelectItem>
+                                <SelectItem value="critico">{t('critical')}</SelectItem>
+                                <SelectItem value="em_andamento">{t('in_progress')}</SelectItem>
+                                <SelectItem value="confirmado">{t('confirmed')}</SelectItem>
+                                <SelectItem value="pendente">{t('pending')}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -184,13 +186,13 @@ const MapaPage = () => {
                     {/* Sidebar Lista de Incidentes */}
                     <div className="w-80 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-shrink-0 flex flex-col z-10 shadow-[4px_0_15px_-3px_rgba(0,0,0,0.1)]">
                         <div className="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800/50">
-                            <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300">Painel de Ocorrências</h3>
+                            <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300">{t('incidents_panel')}</h3>
                         </div>
                         <div className="flex-1 overflow-y-auto p-3 space-y-3">
                             {filteredIncidentes.length === 0 ? (
                                 <div className="text-center py-10 opacity-50">
                                     <AlertTriangle className="h-10 w-10 mx-auto mb-2" />
-                                    <p className="text-sm">Nenhum incidente encontrado</p>
+                                    <p className="text-sm">{t('no_crises_found')}</p>
                                 </div>
                             ) : (
                                 filteredIncidentes.map((inc) => (
@@ -205,7 +207,7 @@ const MapaPage = () => {
                                                 style={{ borderColor: getStatusColor(inc.status), color: getStatusColor(inc.status) }}
                                                 className="text-[10px] uppercase font-bold"
                                             >
-                                                {getStatusLabel(inc.status)}
+                                                {getStatusLabel(inc.status, t)}
                                             </Badge>
                                             <span className="text-[10px] text-gray-400">
                                                 {new Date(inc.created_at).toLocaleDateString('pt-AO')}
@@ -221,11 +223,11 @@ const MapaPage = () => {
                             )}
                         </div>
                         <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 text-xs text-center text-gray-500">
-                            <strong>Legenda:</strong>
+                            <strong>{t('legend')}:</strong>
                             <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
-                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> Crítico</div>
-                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> Andamento</div>
-                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Confirm.</div>
+                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> {t('critical')}</div>
+                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> {t('in_progress')}</div>
+                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> {t('confirmed')}</div>
                             </div>
                         </div>
                     </div>
@@ -276,14 +278,14 @@ const MapaPage = () => {
                                                         {incidente.descricao?.substring(0, 80)}{incidente.descricao?.length > 80 ? '...' : ''}
                                                     </p>
                                                     <div className="space-y-1 mb-3 bg-gray-50 p-2 rounded text-gray-700">
-                                                        <p className="text-xs flex justify-between"><strong>Categoria:</strong> <span>{incidente.categoria?.nome || 'N/A'}</span></p>
-                                                        <p className="text-xs flex justify-between"><strong>Município:</strong> <span>{incidente.municipio?.nome || 'N/A'}</span></p>
+                                                        <p className="text-xs flex justify-between"><strong>{t('category')}:</strong> <span>{incidente.categoria?.nome || 'N/A'}</span></p>
+                                                        <p className="text-xs flex justify-between"><strong>{t('municipality')}:</strong> <span>{incidente.municipio?.nome || 'N/A'}</span></p>
                                                     </div>
                                                     <Link 
                                                         to={`/crises/${incidente.id}`}
                                                         className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-md text-xs font-semibold transition-colors"
                                                     >
-                                                        Ver Detalhes Completos <ArrowRight className="h-3 w-3" />
+                                                        {t('view_full_details')} <ArrowRight className="h-3 w-3" />
                                                     </Link>
                                                 </div>
                                             </Popup>

@@ -26,10 +26,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { dashboardService, DashboardStats, ChartData } from "@/services/dashboardService";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user, isAdmin, isEntidade, loading: authLoading } = useAuth();
+    const { t } = useTranslation();
     
     const [stats, setStats] = useState<DashboardStats>({
         total_incidentes: 0,
@@ -143,7 +145,7 @@ const Dashboard = () => {
             <div className="flex min-h-screen items-center justify-center bg-background">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-muted-foreground">Carregando dashboard...</p>
+                    <p className="text-muted-foreground">{t('loading_dashboard')}</p>
                 </div>
             </div>
         );
@@ -157,24 +159,24 @@ const Dashboard = () => {
             <div className="mb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
                 <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">
-                        Visão Geral
+                        {t('overview')}
                     </p>
                     <h1 className="text-2xl lg:text-3xl font-bold">
-                        Painel de Controlo
+                        {t('control_panel')}
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Bem-vindo, {user.nome} {isAdmin && "(Administrador)"}
-                        {isEntidade && "(Entidade Promotora)"}
+                        {t('welcome')}, {user.nome} {isAdmin && `(${t('role_admin')})`}
+                        {isEntidade && `(${t('role_entity')})`}
                     </p>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                     <Select value={selectedProvincia} onValueChange={setSelectedProvincia}>
                         <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Todas Províncias" />
+                            <SelectValue placeholder={t('all_provinces')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todas Províncias</SelectItem>
+                            <SelectItem value="all">{t('all_provinces')}</SelectItem>
                             {provincias.map((prov) => (
                                 <SelectItem key={prov.id} value={String(prov.id)}>
                                     {prov.nome}
@@ -185,10 +187,10 @@ const Dashboard = () => {
                     
                     <Select value={selectedMunicipio} onValueChange={setSelectedMunicipio} disabled={selectedProvincia === "all"}>
                         <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Todos Municípios" />
+                            <SelectValue placeholder={t('all_municipalities')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos Municípios</SelectItem>
+                            <SelectItem value="all">{t('all_municipalities')}</SelectItem>
                             {municipios.map((mun) => (
                                 <SelectItem key={mun.id} value={String(mun.id)}>
                                     {mun.nome}
@@ -199,7 +201,7 @@ const Dashboard = () => {
 
                     <Button variant="outline" size="default" className="gap-2" onClick={() => navigate("/crises")}>
                         <History className="h-4 w-4" />
-                        Crises
+                        {t('emergencies')}
                     </Button>
                 </div>
             </div>
@@ -207,26 +209,26 @@ const Dashboard = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard 
-                    title="Crises Ativas" 
+                    title={t('active_crises')} 
                     value={stats.active_crises} 
                     icon={AlertTriangle} 
                     variant="critical" 
-                    trend={`${stats.critical_count} crítica(s)`}
+                    trend={t('critical_trend', { count: stats.critical_count })}
                 />
                 <StatCard 
-                    title="Pessoas Afetadas" 
+                    title={t('affected_people')} 
                     value={stats.total_affected.toLocaleString()} 
                     icon={Users} 
                     variant="warning"
                 />
                 <StatCard 
-                    title="Voluntários" 
+                    title={t('volunteers')} 
                     value={stats.total_volunteers.toLocaleString()} 
                     icon={Shield} 
                     variant="success"
                 />
                 <StatCard 
-                    title="Crises Resolvidas" 
+                    title={t('resolved_crises')} 
                     value={stats.resolved_crises} 
                     icon={CheckCircle} 
                     variant="default"
@@ -236,22 +238,22 @@ const Dashboard = () => {
             {/* Admin Only Section */}
             {isAdmin && (
                 <div className="mb-8">
-                    <h2 className="text-lg font-semibold mb-4">Visão Administrativa</h2>
+                    <h2 className="text-lg font-semibold mb-4">{t('admin_view')}</h2>
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                         <StatCard 
-                            title="Total Incidentes" 
+                            title={t('total_reports')} 
                             value={stats.total_incidentes} 
                             icon={Activity} 
                             variant="default"
                         />
                         <StatCard 
-                            title="Taxa de Resposta" 
+                            title={t('response_rate')} 
                             value={`${stats.response_rate}%`} 
                             icon={TrendingUp} 
                             variant="default"
                         />
                         <StatCard 
-                            title="Entidades" 
+                            title={t('entities')} 
                             value={stats.total_entidades} 
                             icon={Building2} 
                             variant="default"
@@ -264,25 +266,25 @@ const Dashboard = () => {
             <div className="mb-8">
                 <h2 className="text-lg font-semibold mb-4 text-foreground/90 flex items-center gap-2">
                     <Shield className="h-5 w-5 text-blue-500" />
-                    Estado de Validação
+                    {t('validation_status')}
                 </h2>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                     <StatCard 
-                        title="Validados/Confirmados" 
+                        title={t('validated_confirmed')} 
                         value={stats.confirmed_validation || 0} 
                         icon={CheckCircle} 
                         variant="success"
-                        trend={`${stats.entity_validated || 0} por entidades`}
+                        trend={`${t('by_entities')} ${stats.entity_validated || 0}`}
                     />
                     <StatCard 
-                        title="Pendentes de Validação" 
+                        title={t('pending_validation')} 
                         value={stats.pending_validation || 0} 
                         icon={Clock} 
                         variant="warning"
-                        trend="Aguardando confirmações"
+                        trend={t('waiting_confirmations')}
                     />
                     <StatCard 
-                        title="Total de Reportes" 
+                        title={t('total_reports')} 
                         value={stats.total_incidentes} 
                         icon={Activity} 
                         variant="default"
@@ -293,16 +295,16 @@ const Dashboard = () => {
             {/* Entidade Only Section */}
             {isEntidade && (
                 <div className="mb-8">
-                    <h2 className="text-lg font-semibold mb-4">Visão da Entidade</h2>
+                    <h2 className="text-lg font-semibold mb-4">{t('entity_view')}</h2>
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                         <StatCard 
-                            title="Meus Incidentes" 
+                            title={t('my_incidents')} 
                             value={stats.my_incident_count || 0} 
                             icon={AlertTriangle} 
                             variant="default"
                         />
                         <StatCard 
-                            title="Meus Voluntários" 
+                            title={t('my_volunteers')} 
                             value={stats.my_volunteer_count || 0} 
                             icon={Users} 
                             variant="default"

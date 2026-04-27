@@ -1,9 +1,13 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Shield, Mail, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import api from "@/lib/api";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const ForgotPasswordPage = () => {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -14,12 +18,12 @@ const ForgotPasswordPage = () => {
     setError(null);
     
     if (!email) {
-      setError("Digite seu email");
+      setError(t('email_required'));
       return;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setError("Email inválido");
+      setError(t('invalid_email'));
       return;
     }
 
@@ -29,13 +33,14 @@ const ForgotPasswordPage = () => {
       const response = await api.post("/auth/forgot-password", { email });
       
       if (response.data.success) {
-        setIsSubmitted(true);
+        toast.success(t('recovery_code_sent'));
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
       } else {
-        setError(response.data.message || "Erro ao enviar link de recuperação");
+        setError(response.data.message || t('error_sending_recovery'));
       }
     } catch (err: any) {
       console.error("Erro ao solicitar recuperação:", err);
-      setError(err.response?.data?.message || "Erro ao conectar ao servidor");
+      setError(err.response?.data?.message || t('connection_error'));
     } finally {
       setIsLoading(false);
     }
@@ -49,30 +54,30 @@ const ForgotPasswordPage = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg mb-4">
               <CheckCircle className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Email Enviado!</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('email_sent_title')}</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Verifique sua caixa de entrada
+              {t('email_sent_subtitle')}
             </p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
             <div className="text-center">
               <p className="text-gray-600 mb-4">
-                Enviamos um link de recuperação para:
+                {t('email_recovery_instructions')}
               </p>
               <p className="font-medium text-gray-900 bg-gray-50 p-3 rounded-lg mb-6">
                 {email}
               </p>
               <p className="text-sm text-gray-500 mb-6">
-                Clique no link enviado para redefinir sua senha. 
-                O link é válido por 24 horas.
+                {t('reset_password_instructions')}
+                {t('link_valid_24h')}
               </p>
               <Link
                 to="/login"
                 className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Voltar para o login
+                {t('back_to_login')}
               </Link>
             </div>
           </div>
@@ -88,9 +93,9 @@ const ForgotPasswordPage = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg mb-4">
             <Shield className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Esqueci minha senha</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('forgot_password_title')}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Informe seu email para receber o link de recuperação
+            {t('forgot_password_subtitle')}
           </p>
         </div>
 
@@ -128,10 +133,10 @@ const ForgotPasswordPage = () => {
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Enviando...</span>
+                  <span>{t('sending')}</span>
                 </div>
               ) : (
-                "Enviar link de recuperação"
+                t('send_recovery_link')
               )}
             </button>
           </form>
@@ -142,7 +147,7 @@ const ForgotPasswordPage = () => {
               className="text-sm text-gray-600 hover:text-primary transition-colors inline-flex items-center gap-1"
             >
               <ArrowLeft className="h-3 w-3" />
-              Voltar para o login
+              {t('back_to_login')}
             </Link>
           </div>
         </div>

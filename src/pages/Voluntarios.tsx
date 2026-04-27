@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { 
     Users, 
     MapPin, 
@@ -98,31 +99,33 @@ interface Entidade {
     nome: string;
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: JSX.Element }> = {
+const getStatusConfig = (t: any): Record<string, { label: string; color: string; icon: JSX.Element }> => ({
     activo: { 
-        label: "Ativo", 
+        label: t('active'), 
         color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
         icon: <CheckCircle className="h-3 w-3" />
     },
     inactivo: { 
-        label: "Inativo", 
+        label: t('inactive'), 
         color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400",
         icon: <XCircle className="h-3 w-3" />
     },
     pendente: { 
-        label: "Pendente", 
+        label: t('pending'), 
         color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
         icon: <Clock className="h-3 w-3" />
     },
     suspenso: { 
-        label: "Suspenso", 
+        label: t('suspended'), 
         color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
         icon: <UserX className="h-3 w-3" />
     },
-};
+});
 
 const VoluntariosPage = () => {
     const { user, isAdmin, isEntidade } = useAuth();
+    const { t } = useTranslation();
+    const statusConfig = getStatusConfig(t);
     const navigate = useNavigate();
     
     const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
@@ -215,10 +218,9 @@ const VoluntariosPage = () => {
                     setVoluntarios([]);
                     setMeta(null);
                 }
-            } else {
                 setVoluntarios([]);
                 setMeta(null);
-                toast.error(response.data.message || "Erro ao carregar voluntários");
+                toast.error(response.data.message || t('loading'));
             }
         } catch (error: any) {
             console.error("Erro ao carregar voluntários:", error);
@@ -305,9 +307,9 @@ const VoluntariosPage = () => {
             <AppLayout>
                 <div className="flex flex-col items-center justify-center h-screen">
                     <UserX className="h-16 w-16 text-red-500 mb-4" />
-                    <h2 className="text-xl font-bold mb-2">Acesso Negado</h2>
-                    <p className="text-muted-foreground">Apenas administradores e entidades podem acessar esta página.</p>
-                    <Button className="mt-4" onClick={() => navigate("/")}>Voltar ao Dashboard</Button>
+                    <h2 className="text-xl font-bold mb-2">{t('access_denied')}</h2>
+                    <p className="text-muted-foreground">{t('access_warning')}</p>
+                    <Button className="mt-4" onClick={() => navigate("/")}>{t('back_to_dashboard')}</Button>
                 </div>
             </AppLayout>
         );
@@ -321,21 +323,21 @@ const VoluntariosPage = () => {
                     <div>
                         <h1 className="text-2xl font-bold flex items-center gap-2">
                             <Users className="h-6 w-6 text-primary" />
-                            Voluntários
+                            {t('volunteers')}
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Gestão de voluntários cadastrados no sistema
+                            {t('user_management')}
                         </p>
                     </div>
                     <div className="flex gap-2">
                         {hasActiveFilters && (
                             <Button variant="outline" size="sm" onClick={handleResetFilters}>
-                                Limpar Filtros
+                                {t('clear_filters')}
                             </Button>
                         )}
                         <Button variant="outline" size="sm" onClick={fetchVoluntarios} className="gap-2">
                             <RefreshCw className="h-3 w-3" />
-                            Atualizar
+                            {t('update')}
                         </Button>
                     </div>
                 </div>
@@ -345,11 +347,11 @@ const VoluntariosPage = () => {
                     <form onSubmit={handleSearch} className="space-y-4">
                         <div className="flex flex-wrap gap-3 items-end">
                             <div className="flex-1 min-w-[200px]">
-                                <label className="text-xs text-muted-foreground mb-1 block">Busca</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">{t('search')}</label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="Nome, email ou BI..."
+                                        placeholder={t('search_volunteer_placeholder')}
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         className="pl-9"
@@ -358,29 +360,29 @@ const VoluntariosPage = () => {
                             </div>
                             
                             <div className="w-36">
-                                <label className="text-xs text-muted-foreground mb-1 block">Status</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">{t('status')}</label>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Status" />
+                                        <SelectValue placeholder={t('status')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Todos</SelectItem>
-                                        <SelectItem value="activo">Ativo</SelectItem>
-                                        <SelectItem value="inactivo">Inativo</SelectItem>
-                                        <SelectItem value="pendente">Pendente</SelectItem>
-                                        <SelectItem value="suspenso">Suspenso</SelectItem>
+                                        <SelectItem value="all">{t('all')}</SelectItem>
+                                        <SelectItem value="activo">{t('active')}</SelectItem>
+                                        <SelectItem value="inactivo">{t('inactive')}</SelectItem>
+                                        <SelectItem value="pendente">{t('pending')}</SelectItem>
+                                        <SelectItem value="suspenso">{t('suspended')}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="w-48">
-                                <label className="text-xs text-muted-foreground mb-1 block">Município</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">{t('municipality')}</label>
                                 <Select value={municipioFilter} onValueChange={setMunicipioFilter}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Município" />
+                                        <SelectValue placeholder={t('municipality')} />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-64">
-                                        <SelectItem value="all">Todos</SelectItem>
+                                        <SelectItem value="all">{t('all')}</SelectItem>
                                         {municipios.map(m => (
                                             <SelectItem key={m.id} value={String(m.id)}>{m.nome}</SelectItem>
                                         ))}
@@ -405,7 +407,7 @@ const VoluntariosPage = () => {
                                 </div>
                             )}
 
-                            <Button type="submit" className="mt-5">Buscar</Button>
+                            <Button type="submit" className="mt-5">{t('verify')}</Button>
                         </div>
                     </form>
                 </div>
@@ -413,7 +415,7 @@ const VoluntariosPage = () => {
                 {/* Stats */}
                 {meta && (
                     <div className="flex justify-between items-center mb-4 text-sm text-muted-foreground">
-                        <span>Total de voluntários: {meta.total}</span>
+                        <span>{t('total_volunteers_label')}: {meta.total}</span>
                     </div>
                 )}
 
@@ -426,8 +428,8 @@ const VoluntariosPage = () => {
                     <Card>
                         <CardContent className="py-12 text-center text-muted-foreground">
                             <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p>Nenhum voluntário encontrado.</p>
-                            <p className="text-sm mt-1">Tente ajustar os filtros.</p>
+                            <p>{t('no_volunteers_found')}</p>
+                            <p className="text-sm mt-1">{t('try_adjust_filters')}</p>
                         </CardContent>
                     </Card>
                 ) : (
@@ -442,7 +444,7 @@ const VoluntariosPage = () => {
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-sm">{vol.user?.nome_completo}</h3>
-                                                <p className="text-xs text-muted-foreground">{vol.area_actuacao || "Sem especialidade"}</p>
+                                                <p className="text-xs text-muted-foreground">{vol.area_actuacao || t('no_specialty')}</p>
                                             </div>
                                         </div>
                                         {getStatusBadge(vol.status)}
@@ -451,7 +453,7 @@ const VoluntariosPage = () => {
                                     <div className="space-y-2 text-xs text-muted-foreground mb-3">
                                         <div className="flex items-center gap-2">
                                             <MapPin className="h-3 w-3" />
-                                            <span>{vol.municipio?.nome || "Não informado"}</span>
+                                            <span>{vol.municipio?.nome || t('all')}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Mail className="h-3 w-3" />
@@ -465,7 +467,7 @@ const VoluntariosPage = () => {
                                         )}
                                         <div className="flex items-center gap-2">
                                             <Clock className="h-3 w-3" />
-                                            <span>Cadastro: {formatDate(vol.created_at)}</span>
+                                            <span>{t('registration')}: {formatDate(vol.created_at)}</span>
                                         </div>
                                         {vol.numero_bi && (
                                             <div className="flex items-center gap-2">
@@ -492,7 +494,7 @@ const VoluntariosPage = () => {
                                             }}
                                         >
                                             <Eye className="h-3 w-3 mr-1" />
-                                            Detalhes
+                                            {t('details')}
                                         </Button>
                                         {isAdmin && (
                                             <Button 
@@ -506,7 +508,7 @@ const VoluntariosPage = () => {
                                                 }}
                                             >
                                                 <UserCheck className="h-3 w-3 mr-1" />
-                                                Status
+                                                {t('status')}
                                             </Button>
                                         )}
                                     </div>
@@ -554,7 +556,7 @@ const VoluntariosPage = () => {
 
                 {meta && (
                     <div className="mt-4 text-xs text-muted-foreground text-center">
-                        Mostrando {meta.from} a {meta.to} de {meta.total} voluntários
+                        {t('showing_volunteers_count', { from: meta.from, to: meta.to, total: meta.total })}
                     </div>
                 )}
             </div>
@@ -563,9 +565,9 @@ const VoluntariosPage = () => {
             <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Detalhes do Voluntário</DialogTitle>
+                        <DialogTitle>{t('volunteer_details_title')}</DialogTitle>
                         <DialogDescription>
-                            Informações completas do voluntário cadastrado no sistema.
+                            {t('volunteer_details_subtitle')}
                         </DialogDescription>
                     </DialogHeader>
                     {selectedVoluntario && (
@@ -576,7 +578,7 @@ const VoluntariosPage = () => {
                                 </div>
                                 <div>
                                     <h3 className="font-bold">{selectedVoluntario.user?.nome_completo}</h3>
-                                    <p className="text-sm text-muted-foreground">{selectedVoluntario.area_actuacao || "Sem especialidade"}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedVoluntario.area_actuacao || t('no_specialty')}</p>
                                 </div>
                             </div>
                             
@@ -596,15 +598,15 @@ const VoluntariosPage = () => {
                                 <div className="text-muted-foreground">Município:</div>
                                 <div>{selectedVoluntario.municipio?.nome || "-"}</div>
                                 
-                                <div className="text-muted-foreground">Status:</div>
+                                <div className="text-muted-foreground">{t('status')}:</div>
                                 <div>{getStatusBadge(selectedVoluntario.status)}</div>
                                 
-                                <div className="text-muted-foreground">Cadastro:</div>
+                                <div className="text-muted-foreground">{t('registration')}:</div>
                                 <div>{formatDate(selectedVoluntario.created_at)}</div>
                                 
                                 {selectedVoluntario.entidade_promotora && (
                                     <>
-                                        <div className="text-muted-foreground">Entidade:</div>
+                                        <div className="text-muted-foreground">{t('entities')}:</div>
                                         <div>{selectedVoluntario.entidade_promotora.nome}</div>
                                     </>
                                 )}
@@ -613,7 +615,7 @@ const VoluntariosPage = () => {
                     )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="outline">Fechar</Button>
+                            <Button variant="outline">{t('close')}</Button>
                         </DialogClose>
                     </DialogFooter>
                 </DialogContent>
@@ -623,9 +625,9 @@ const VoluntariosPage = () => {
             <Dialog open={showStatusModal} onOpenChange={setShowStatusModal}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Alterar Status do Voluntário</DialogTitle>
+                        <DialogTitle>{t('change_volunteer_status_title')}</DialogTitle>
                         <DialogDescription>
-                            Altere o status do voluntário no sistema.
+                            {t('change_volunteer_status_subtitle')}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -634,22 +636,22 @@ const VoluntariosPage = () => {
                         </p>
                         <Select value={newStatus} onValueChange={setNewStatus}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Selecione o status" />
+                                <SelectValue placeholder={t('select_category')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="activo">Ativo</SelectItem>
-                                <SelectItem value="inactivo">Inativo</SelectItem>
-                                <SelectItem value="pendente">Pendente</SelectItem>
-                                <SelectItem value="suspenso">Suspenso</SelectItem>
+                                <SelectItem value="activo">{t('active')}</SelectItem>
+                                <SelectItem value="inactivo">{t('inactive')}</SelectItem>
+                                <SelectItem value="pendente">{t('pending')}</SelectItem>
+                                <SelectItem value="suspenso">{t('suspended')}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowStatusModal(false)}>
-                            Cancelar
+                            {t('cancel')}
                         </Button>
                         <Button onClick={handleUpdateStatus} disabled={updating}>
-                            {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                            {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

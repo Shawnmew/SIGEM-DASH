@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SessionProvider } from "@/contexts/SessionContext";
 import { initSoundService } from "@/services/soundService";
+import "./i18n";
 import "./index.css";
 
 // Initialize sound service (prepares audio context on user interaction)

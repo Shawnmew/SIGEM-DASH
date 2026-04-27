@@ -2,11 +2,14 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { signIn, loading, savedProfiles, switchProfile } = useAuth();
+  const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,9 +31,17 @@ const LoginPage = () => {
       return;
     }
 
-    const success = await signIn(email, password);
-    if (success) {
-      navigate("/");
+    try {
+      const success = await signIn(email, password);
+      if (success) {
+        navigate("/");
+      } else {
+        // O signIn já exibe o toast
+        setError("Credenciais inválidas ou acesso negado.");
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || "Erro ao fazer login";
+      setError(errorMessage);
     }
   };
 
@@ -41,22 +52,23 @@ const LoginPage = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg mb-4">
             <Shield className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">SIGEM</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('system_name')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Sistema Integrado de Gestão de Emergências
+            {t('system_description')}
           </p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Acesso ao Sistema
+              {t('access_system')}
             </h2>
-            <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+            <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg flex items-center justify-between gap-4">
               <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <span>Apenas administradores e entidades promotoras têm acesso.</span>
+                <span>{t('access_warning')}</span>
               </p>
+              <LanguageSwitcher />
             </div>
           </div>
 
@@ -71,7 +83,7 @@ const LoginPage = () => {
             {savedProfiles && savedProfiles.length > 0 && (
                 <div className="mb-6 space-y-3">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Entrar com uma conta salva:
+                    {t('saved_accounts')}
                   </label>
                   {savedProfiles.map((p) => (
                     <div 
@@ -104,7 +116,7 @@ const LoginPage = () => {
                     </div>
                     <div className="relative flex justify-center">
                       <span className="bg-white dark:bg-gray-800 px-2 text-xs text-gray-500 dark:text-gray-400">
-                        Ou entre com outra conta
+                        {t('other_account')}
                       </span>
                     </div>
                   </div>
@@ -113,7 +125,7 @@ const LoginPage = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                {t('email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -130,7 +142,7 @@ const LoginPage = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Senha
+                {t('password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -157,7 +169,7 @@ const LoginPage = () => {
                 to="/forgot-password"
                 className="text-xs text-primary hover:text-primary/80 transition-colors"
               >
-                Esqueci minha senha?
+                {t('forgot_password')}
               </Link>
             </div>
 
@@ -169,27 +181,19 @@ const LoginPage = () => {
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>A entrar...</span>
+                  <span>{t('loading')}</span>
                 </div>
               ) : (
-                "Entrar"
+                t('login')
               )}
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-              <strong>Credenciais de teste:</strong>
-            </p>
-            <div className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1 space-y-1">
-              <p>Admin: admin@sistem.ao / password</p>
-              <p>Entidade: protecaocivil@governo.ao / password</p>
-            </div>
-          </div>
+
         </div>
 
         <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
-          © 2026 SIGEM - Sistema Integrado de Gestão de Emergências
+          {t('copyright')}
         </p>
       </div>
     </div>
