@@ -98,6 +98,8 @@ const EntidadesPage = () => {
     nome: "", nif: "", password: "", municipio_id: "", tipo: "publica", status: "pendente", email: "", telefone: ""
   });
 
+  const [loadingNif, setLoadingNif] = useState(false);
+
   if (!authLoading && !isAdmin) {
     toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
     return <Navigate to="/" replace />;
@@ -194,6 +196,28 @@ const EntidadesPage = () => {
     if (!newEntity.municipio_id) errors.municipio_id = "Município é obrigatório";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handleNifLookup = async () => {
+    const nif = newEntity.nif.trim();
+    if (nif.length < 9) return;
+
+    setLoadingNif(true);
+    try {
+      const response = await api.get('/nif', { params: { nif } });
+      if (response.data.success && response.data.data) {
+        const { nome } = response.data.data;
+        setNewEntity({
+          ...newEntity,
+          nome: nome
+        });
+        toast.success("Nome da entidade carregado automaticamente.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar NIF:", error);
+    } finally {
+      setLoadingNif(false);
+    }
   };
 
   const handleCreateEntity = async (e: React.FormEvent) => {
@@ -372,8 +396,35 @@ const EntidadesPage = () => {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Cadastrar Nova Entidade</DialogTitle></DialogHeader>
               <form onSubmit={handleCreateEntity} className="space-y-4">
-                <div><Label>Nome *</Label><Input value={newEntity.nome} onChange={e => setNewEntity({...newEntity, nome: e.target.value})} className={formErrors.nome ? "border-red-500" : ""} />{formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}</div>
-                <div><Label>NIF *</Label><Input value={newEntity.nif} onChange={e => setNewEntity({...newEntity, nif: e.target.value})} className={formErrors.nif ? "border-red-500" : ""} />{formErrors.nif && <p className="text-xs text-red-500">{formErrors.nif}</p>}</div>
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 gap-2">
+                    <Label>NIF *</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={newEntity.nif} 
+                        onChange={e => setNewEntity({...newEntity, nif: e.target.value})} 
+                        onBlur={handleNifLookup}
+                        className={formErrors.nif ? "border-red-500" : ""} 
+                        placeholder="Digite o NIF para verificar"
+                        maxLength={14}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleNifLookup}
+                        disabled={loadingNif || newEntity.nif.length < 9}
+                      >
+                        Verificar
+                      </Button>
+                    </div>
+                    {formErrors.nif && <p className="text-xs text-red-500">{formErrors.nif}</p>}
+                  </div>
+                  <div>
+                    <Label>Nome / Denominação Social *</Label>
+                    <Input value={newEntity.nome} onChange={e => setNewEntity({...newEntity, nome: e.target.value})} className={formErrors.nome ? "border-red-500" : ""} />
+                    {formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}
+                  </div>
+                </div>
                 <div><Label>Email *</Label><Input type="email" value={newEntity.email} onChange={e => setNewEntity({...newEntity, email: e.target.value})} className={formErrors.email ? "border-red-500" : ""} />{formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}</div>
                 <div><Label>Senha *</Label><Input type="password" value={newEntity.password} onChange={e => setNewEntity({...newEntity, password: e.target.value})} className={formErrors.password ? "border-red-500" : ""} />{formErrors.password && <p className="text-xs text-red-500">{formErrors.password}</p>}</div>
                 <div><Label>Município *</Label>

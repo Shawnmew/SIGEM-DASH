@@ -1,5 +1,6 @@
 // src/pages/Index.tsx
 import { useEffect, useState } from "react";
+import { VideoGrid } from "@/components/VideoGrid";
 import { AppLayout } from "@/components/AppLayout";
 import { 
     AlertTriangle, 
@@ -309,6 +310,11 @@ const Dashboard = () => {
                     </div>
                 </div>
             )}
+
+            {/* Vídeos Section */}
+            <div className="mb-8">
+                <VideoGrid />
+            </div>
 
             {/* Charts */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">

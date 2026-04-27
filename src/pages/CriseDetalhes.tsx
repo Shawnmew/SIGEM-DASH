@@ -258,7 +258,8 @@ const CriseDetalhesPage = () => {
     const getMediaUrl = (url: string) => {
         if (!url) return "";
         if (url.startsWith('http')) return url;
-        return `${SERVER_URL}${url}`;
+        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${SERVER_URL}${cleanUrl}`;
     };
 
     if (loading) {
@@ -514,11 +515,17 @@ const CriseDetalhesPage = () => {
                                                     </div>
                                                 )}
                                                 {midia.tipo_midia === 'video' && (
-                                                    <div className="relative overflow-hidden rounded-lg bg-gray-100 aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
-                                                        <Video className="h-12 w-12 text-gray-500" />
-                                                        <span className="text-xs text-muted-foreground mt-2">Vídeo</span>
-                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <Play className="h-8 w-8 text-white" />
+                                                    <div className="relative overflow-hidden rounded-lg bg-black aspect-square flex flex-col items-center justify-center cursor-pointer group-hover:opacity-90 transition-opacity">
+                                                        <video 
+                                                            src={getMediaUrl(midia.url)} 
+                                                            className="w-full h-full object-cover opacity-60"
+                                                            preload="metadata"
+                                                        />
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                            <div className="bg-black/40 backdrop-blur-sm p-3 rounded-full mb-2">
+                                                                <Play className="h-8 w-8 text-white fill-white" />
+                                                            </div>
+                                                            <span className="text-[10px] text-white font-medium uppercase tracking-wider">Assistir Vídeo</span>
                                                         </div>
                                                     </div>
                                                 )}

@@ -43,6 +43,16 @@ export interface RegionImpact {
     total_afetados: number;
 }
 
+export interface VideoItem {
+    id: number;
+    url: string;
+    title: string;
+    location: string;
+    time: string;
+    status: 'live' | 'recent';
+    incidente_id: number;
+}
+
 export const dashboardService = {
     async getStats(provinciaId?: string, municipioId?: string): Promise<DashboardStats> {
         const response = await api.get('/dashboard/stats', {
@@ -74,9 +84,9 @@ export const dashboardService = {
         return response.data.data;
     },
 
-    async getVideoFeed(): Promise<any[]> {
+    async getVideoFeed(): Promise<VideoItem[]> {
         try {
-            const response = await api.get('/dashboard/videos');
+            const response = await api.get('/dashboard/recent-videos');
             return response.data.data || [];
         } catch (error) {
             console.error("Erro ao carregar vídeos:", error);

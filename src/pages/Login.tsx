@@ -189,7 +189,7 @@ const LoginPage = () => {
         </div>
 
         <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
-          © 2024 SIGEM - Sistema Integrado de Gestão de Emergências
+          © 2026 SIGEM - Sistema Integrado de Gestão de Emergências
         </p>
       </div>
     </div>

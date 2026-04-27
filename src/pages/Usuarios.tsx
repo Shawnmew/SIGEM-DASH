@@ -67,6 +67,7 @@ interface FormErrors {
   telefone?: string;
   tipo?: string;
   municipio_id?: string;
+  nif?: string;
 }
 
 interface NewUser {
@@ -79,6 +80,7 @@ interface NewUser {
   tipo: string;
   municipio_id: string;
   status: string;
+  nif: string;
 }
 
 const UsuariosPage = () => {
@@ -113,8 +115,11 @@ const UsuariosPage = () => {
     telefone: "",
     tipo: "cidadao",
     municipio_id: "",
-    status: "pendente"
+    status: "pendente",
+    nif: ""
   });
+
+  const [loadingNif, setLoadingNif] = useState(false);
 
   if (!authLoading && !isAdmin) {
     toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
@@ -217,6 +222,35 @@ const UsuariosPage = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const handleNifLookup = async () => {
+    const nif = newUser.nif.trim();
+    if (nif.length < 9) return;
+
+    setLoadingNif(true);
+    try {
+      const response = await api.get('/nif', { params: { nif } });
+      if (response.data.success && response.data.data) {
+        const { nome } = response.data.data;
+        // Split name into nome and sobrenome
+        const parts = nome.trim().split(' ');
+        const first = parts[0];
+        const last = parts.length > 1 ? parts.slice(1).join(' ') : "";
+        
+        setNewUser({
+          ...newUser,
+          nome: first,
+          sobrenome: last
+        });
+        toast.success("Dados do NIF carregados automaticamente.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar NIF:", error);
+      // Don't show toast error here to not be annoying if they just typed it wrong
+    } finally {
+      setLoadingNif(false);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -240,7 +274,7 @@ const UsuariosPage = () => {
         setShowCreate(false);
         setNewUser({
           nome: "", sobrenome: "", email: "", password: "", password_confirmation: "",
-          telefone: "", tipo: "cidadao", municipio_id: "", status: "pendente"
+          telefone: "", tipo: "cidadao", municipio_id: "", status: "pendente", nif: ""
         });
         setFormErrors({});
         fetchUsuarios(1, search, tipo, status);
@@ -439,6 +473,28 @@ const UsuariosPage = () => {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Cadastrar Novo Usuário</DialogTitle></DialogHeader>
               <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="relative">
+                    <Label>NIF / BI (Preenchimento Automático)</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={newUser.nif} 
+                        onChange={e => setNewUser({...newUser, nif: e.target.value})} 
+                        onBlur={handleNifLookup}
+                        placeholder="Digite o NIF para carregar os dados"
+                        maxLength={14}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleNifLookup}
+                        disabled={loadingNif || newUser.nif.length < 9}
+                      >
+                        {loadingNif ? <RefreshCcw className="h-4 w-4 animate-spin" /> : "Verificar"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><Label>Nome *</Label><Input value={newUser.nome} onChange={e => setNewUser({...newUser, nome: e.target.value})} className={formErrors.nome ? "border-red-500" : ""} />{formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}</div>
                   <div><Label>Sobrenome *</Label><Input value={newUser.sobrenome} onChange={e => setNewUser({...newUser, sobrenome: e.target.value})} className={formErrors.sobrenome ? "border-red-500" : ""} />{formErrors.sobrenome && <p className="text-xs text-red-500">{formErrors.sobrenome}</p>}</div>
