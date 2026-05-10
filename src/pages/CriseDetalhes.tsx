@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -70,6 +71,8 @@ interface Incidente {
     title: string;
     descricao: string;
     status: string;
+    gravidade?: string;
+    numero_afetados_intervalo?: string;
     latitude: string;
     longitude: string;
     created_at: string;
@@ -183,6 +186,21 @@ const CriseDetalhesPage = () => {
     const [activeTab, setActiveTab] = useState("detalhes");
     const [selectedMedia, setSelectedMedia] = useState<Midia | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [updatingGravidade, setUpdatingGravidade] = useState(false);
+
+    const handleGravidadeChange = async (newGravidade: string) => {
+        if (!incidente) return;
+        setUpdatingGravidade(true);
+        try {
+            await api.patch(`/incidentes/${incidente.id}/gravidade`, { gravidade: newGravidade });
+            setIncidente({ ...incidente, gravidade: newGravidade });
+            toast.success("Gravidade atualizada com sucesso");
+        } catch (error) {
+            toast.error("Erro ao atualizar gravidade");
+        } finally {
+            setUpdatingGravidade(false);
+        }
+    };
 
     useEffect(() => {
         loadIncidente();
@@ -419,6 +437,44 @@ const CriseDetalhesPage = () => {
                                                 )}
                                             </div>
                                         </div>
+                                        <Separator />
+                                        <div className="flex items-start gap-3">
+                                            <AlertTriangle className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                            <div className="w-full">
+                                                <p className="text-xs text-muted-foreground">Gravidade</p>
+                                                {(isEntidade || currentUser?.tipo === 'voluntario' || isAdmin) ? (
+                                                    <Select 
+                                                        value={incidente.gravidade || ''} 
+                                                        onValueChange={handleGravidadeChange}
+                                                        disabled={updatingGravidade}
+                                                    >
+                                                        <SelectTrigger className="mt-1 w-full max-w-xs h-8 text-xs">
+                                                            <SelectValue placeholder="Definir gravidade" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="baixa">Baixa</SelectItem>
+                                                            <SelectItem value="media">Média</SelectItem>
+                                                            <SelectItem value="alta">Alta</SelectItem>
+                                                            <SelectItem value="critica">Crítica</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                ) : (
+                                                    <p className="text-sm font-medium capitalize">{incidente.gravidade || 'Não definida'}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {incidente.numero_afetados_intervalo && (
+                                            <>
+                                                <Separator />
+                                                <div className="flex items-start gap-3">
+                                                    <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground">Número de Afetados</p>
+                                                        <p className="text-sm font-medium">{incidente.numero_afetados_intervalo}</p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </CardContent>
                                 </Card>
 

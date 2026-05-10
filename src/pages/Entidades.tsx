@@ -8,7 +8,7 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -100,6 +100,11 @@ const EntidadesPage = () => {
   const [newEntity, setNewEntity] = useState({
     nome: "", nif: "", password: "", municipio_id: "", tipo: "publica", status: "pendente", email: "", telefone: ""
   });
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   const [loadingNif, setLoadingNif] = useState(false);
 
@@ -279,6 +284,37 @@ const EntidadesPage = () => {
       toast.success(`Status alterado para ${statusToApprove}!`);
     } catch (err) {
       toast.error("Erro ao alterar status.");
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!selectedEntity || !newPassword) return;
+    
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    
+    setUpdating(true);
+    try {
+      await api.put(`/admin/entities/${selectedEntity.id}/password`, { 
+        password: newPassword,
+        password_confirmation: confirmPassword
+      });
+      toast.success(`Senha de ${selectedEntity.nome} alterada com sucesso`);
+      setShowPasswordModal(false);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      console.error("Erro ao alterar senha:", error);
+      toast.error(error.response?.data?.message || "Erro ao alterar senha");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -529,6 +565,17 @@ const EntidadesPage = () => {
                       </DialogContent>
                     </Dialog>
                     
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => { 
+                        setSelectedEntity(entity); 
+                        setShowPasswordModal(true); 
+                      }}
+                    >
+                      {t('password')}
+                    </Button>
+                    
                     <Button size="sm" variant="destructive" onClick={() => handleDeleteEntity(entity.id)}>{t('remove')}</Button>
                   </TableCell>
                 </TableRow>
@@ -557,6 +604,45 @@ const EntidadesPage = () => {
           </div>
         )}
       </div>
+      {/* Modal de Alterar Senha */}
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para a entidade <strong>{selectedEntity?.nome}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <Input 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar Senha</Label>
+              <Input 
+                type="password" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="Repita a nova senha"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleChangePassword} disabled={updating}>
+              {updating ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Salvar Senha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };

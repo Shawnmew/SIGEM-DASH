@@ -41,6 +41,7 @@ import {
     DialogFooter,
     DialogClose,
     DialogDescription,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import {
     Pagination,
@@ -70,6 +71,7 @@ interface Voluntario {
         email: string;
         telefone: string | null;
         nome_completo: string;
+        foto_perfil_url: string | null;
     };
     municipio: {
         id: number;
@@ -217,10 +219,12 @@ const VoluntariosPage = () => {
                 } else {
                     setVoluntarios([]);
                     setMeta(null);
+                    toast.error(response.data.message || t('loading'));
                 }
+            } else {
                 setVoluntarios([]);
                 setMeta(null);
-                toast.error(response.data.message || t('loading'));
+                toast.error(response.data.message || "Erro ao carregar voluntários");
             }
         } catch (error: any) {
             console.error("Erro ao carregar voluntários:", error);
@@ -439,9 +443,38 @@ const VoluntariosPage = () => {
                                 <CardContent className="p-4">
                                     <div className="flex items-start justify-between mb-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-sm">
-                                                {vol.user?.nome?.charAt(0)}{vol.user?.sobrenome?.charAt(0)}
-                                            </div>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-sm cursor-zoom-in hover:opacity-80 transition-opacity">
+                                                        {vol.user?.foto_perfil_url ? (
+                                                            <img 
+                                                                src={vol.user.foto_perfil_url} 
+                                                                alt={vol.user.nome_completo}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    // Fallback se a imagem falhar
+                                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                                    (e.target as HTMLImageElement).parentElement!.textContent = 
+                                                                        `${vol.user?.nome?.charAt(0)}${vol.user?.sobrenome?.charAt(0)}`;
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <>{vol.user?.nome?.charAt(0)}{vol.user?.sobrenome?.charAt(0)}</>
+                                                        )}
+                                                    </div>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                                                    <div className="relative w-full h-full flex items-center justify-center">
+                                                        {vol.user?.foto_perfil_url && (
+                                                            <img 
+                                                                src={vol.user.foto_perfil_url} 
+                                                                alt={vol.user.nome_completo} 
+                                                                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
                                             <div>
                                                 <h3 className="font-bold text-sm">{vol.user?.nome_completo}</h3>
                                                 <p className="text-xs text-muted-foreground">{vol.area_actuacao || t('no_specialty')}</p>
@@ -573,9 +606,32 @@ const VoluntariosPage = () => {
                     {selectedVoluntario && (
                         <div className="space-y-3">
                             <div className="flex items-center gap-3 pb-3 border-b">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-lg">
-                                    {selectedVoluntario.user?.nome?.charAt(0)}{selectedVoluntario.user?.sobrenome?.charAt(0)}
-                                </div>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-lg cursor-zoom-in hover:opacity-80 transition-opacity shadow-sm">
+                                            {selectedVoluntario.user?.foto_perfil_url ? (
+                                                <img 
+                                                    src={selectedVoluntario.user.foto_perfil_url} 
+                                                    alt={selectedVoluntario.user.nome_completo}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <>{selectedVoluntario.user?.nome?.charAt(0)}{selectedVoluntario.user?.sobrenome?.charAt(0)}</>
+                                            )}
+                                        </div>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                                        <div className="relative w-full h-full flex items-center justify-center">
+                                            {selectedVoluntario.user?.foto_perfil_url && (
+                                                <img 
+                                                    src={selectedVoluntario.user.foto_perfil_url} 
+                                                    alt={selectedVoluntario.user.nome_completo} 
+                                                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                                                />
+                                            )}
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
                                 <div>
                                     <h3 className="font-bold">{selectedVoluntario.user?.nome_completo}</h3>
                                     <p className="text-sm text-muted-foreground">{selectedVoluntario.area_actuacao || t('no_specialty')}</p>

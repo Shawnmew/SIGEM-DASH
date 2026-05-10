@@ -17,6 +17,7 @@ import {
   Sun,
   Moon,
   Activity,
+  User,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -162,15 +163,38 @@ export function AppSidebar() {
               aria-label="Informações do usuário"
             >
               <div className="flex justify-between items-center">
-                  <div>
-                    <p className={`text-[10px] ${userEmailClass} truncate max-w-[140px]`}>{user.email}</p>
-                    <p className={`text-[9px] ${userRoleClass} mt-0.5`}>
-                        {isAdmin ? t('role_admin') : isEntidade ? t('role_entity') : t('role_user')}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold border border-primary/20">
+                      {user.foto_perfil_url ? (
+                        <img src={user.foto_perfil_url} alt={user.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <>{user.nome.charAt(0)}</>
+                      )}
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className={`text-[10px] ${userEmailClass} truncate max-w-[120px]`}>{user.email}</p>
+                      <p className={`text-[9px] ${userRoleClass} mt-0.5`}>
+                          {isAdmin ? t('role_admin') : isEntidade ? t('role_entity') : t('role_user')}
+                      </p>
+                    </div>
                   </div>
                   <Users className="h-3.5 w-3.5 text-gray-400" />
               </div>
             </div>
+          )}
+
+          {!collapsed && (
+            <NavLink
+              to="/perfil"
+              className={({ isActive }) =>
+                `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                  isActive ? navLinkActiveClass : navLinkInactiveClass
+                } ${collapsed ? "justify-center" : ""}`
+              }
+            >
+              <User className="h-4 w-4" />
+              {!collapsed && <span>{t('my_profile') || "Meu Perfil"}</span>}
+            </NavLink>
           )}
 
           {!collapsed && showAccounts && (
@@ -183,7 +207,11 @@ export function AppSidebar() {
                           className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md text-[11px] ${p.user.email === user?.email ? 'bg-primary/10 text-primary font-medium' : navLinkInactiveClass}`}
                       >
                           <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[8px] font-bold overflow-hidden">
-                              {p.user.nome.charAt(0)}
+                              {p.user.foto_perfil_url ? (
+                                <img src={p.user.foto_perfil_url} alt={p.user.nome} className="w-full h-full object-cover" />
+                              ) : (
+                                <>{p.user.nome.charAt(0)}</>
+                              )}
                           </div>
                           <span className="truncate">{p.user.email}</span>
                       </button>

@@ -11,6 +11,7 @@ interface User {
     tipo: string;
     status: string;
     user_type: 'admin' | 'entidade';
+    foto_perfil_url?: string | null;
 }
 
 export interface SavedProfile {

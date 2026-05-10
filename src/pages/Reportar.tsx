@@ -93,6 +93,7 @@ const ReportarPage = () => {
     const [title, setTitle] = useState("");
     const [descricao, setDescricao] = useState("");
     const [categoriaId, setCategoriaId] = useState("");
+    const [numeroAfetadosIntervalo, setNumeroAfetadosIntervalo] = useState("1-2");
     const [selectedLat, setSelectedLat] = useState<number | null>(null);
     const [selectedLng, setSelectedLng] = useState<number | null>(null);
     
@@ -205,7 +206,7 @@ const ReportarPage = () => {
                 setLocationError(t('allow_location')); // Fallback
                 setLocationLoaded(true);
             },
-            { enableHighAccuracy: true, timeout: 10000 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }, [detectarMunicipioPorLocalizacao, t]);
 
@@ -306,7 +307,8 @@ const ReportarPage = () => {
                 municipio_id: municipioAtual.id,
                 latitude: selectedLat?.toString(),
                 longitude: selectedLng?.toString(),
-                status: "pendente"
+                status: "pendente",
+                numero_afetados_intervalo: numeroAfetadosIntervalo
             };
 
             const incidenteResponse = await api.post("/incidentes", incidenteData);
@@ -398,14 +400,29 @@ const ReportarPage = () => {
                                     </div>
 
                                     {municipioDetectado && (
-                                        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <MapPin className="h-4 w-4" />
-                                                <span>{t('municipality')}: <strong>{municipioDetectado.nome}</strong></span>
+                                        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm flex justify-between items-center">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4" />
+                                                    <span>{t('municipality')}: <strong>{municipioDetectado.nome}</strong></span>
+                                                </div>
+                                                {municipioDetectado.provincia_nome && (
+                                                    <p className="text-xs mt-1">{t('province')}: {municipioDetectado.provincia_nome}</p>
+                                                )}
                                             </div>
-                                            {municipioDetectado.provincia_nome && (
-                                                <p className="text-xs mt-1">{t('province')}: {municipioDetectado.provincia_nome}</p>
-                                            )}
+                                            <Button 
+                                                type="button" 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => {
+                                                    locationLoadedRef.current = false;
+                                                    getCurrentLocation();
+                                                }}
+                                                className="text-blue-600 hover:text-blue-800"
+                                            >
+                                                <Crosshair className="h-4 w-4 mr-1" />
+                                                {t('update')}
+                                            </Button>
                                         </div>
                                     )}
                                     
@@ -476,6 +493,23 @@ const ReportarPage = () => {
                                             </SelectContent>
                                         </Select>
                                         {errors.categoria_id && <p className="text-xs text-red-500 mt-1">{errors.categoria_id}</p>}
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="afetados">Número de Afetados (Opcional)</Label>
+                                        <Select value={numeroAfetadosIntervalo} onValueChange={setNumeroAfetadosIntervalo}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione o número de afetados" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="1-2">1 a 2 afetados</SelectItem>
+                                                <SelectItem value="3-5">3 a 5 afetados</SelectItem>
+                                                <SelectItem value="6-10">6 a 10 afetados</SelectItem>
+                                                <SelectItem value="11-50">11 a 50 afetados</SelectItem>
+                                                <SelectItem value="50+">Mais de 50 afetados</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-muted-foreground mt-1">Estimativa de pessoas afetadas pelo incidente.</p>
                                     </div>
 
                                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border">

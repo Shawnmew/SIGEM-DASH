@@ -8,7 +8,7 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,8 @@ import {
   AlertTriangle, 
   Trash, 
   RefreshCcw,
+  RefreshCw,
+  Loader2,
   ShieldCheck
 } from "lucide-react";
 import { 
@@ -48,6 +50,7 @@ interface Usuario {
   created_at?: string;
   reputation_score?: number;
   suspended_until?: string;
+  foto_perfil_url?: string | null;
 }
 
 interface Meta {
@@ -107,6 +110,10 @@ const UsuariosPage = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updating, setUpdating] = useState(false);
   
   const [newUser, setNewUser] = useState<NewUser>({
     nome: "",
@@ -366,6 +373,37 @@ const UsuariosPage = () => {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!selectedUser || !newPassword) return;
+    
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    
+    setUpdating(true);
+    try {
+      await api.put(`/admin/users/${selectedUser.id}/password`, { 
+        password: newPassword,
+        password_confirmation: confirmPassword
+      });
+      toast.success(`Senha de ${selectedUser.nome} alterada com sucesso`);
+      setShowPasswordModal(false);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      console.error("Erro ao alterar senha:", error);
+      toast.error(error.response?.data?.message || "Erro ao alterar senha");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleDeleteUser = async (id: number) => {
     if (!confirm("Tem certeza que deseja remover este usuário?")) return;
 
@@ -557,7 +595,33 @@ const UsuariosPage = () => {
                 usuarios.map(usuario => (
                   <TableRow key={usuario.id} className="border-b border-border">
                     <TableCell className="text-foreground">{usuario.id}</TableCell>
-                    <TableCell className="font-medium text-foreground">{usuario.nome} {usuario.sobrenome}</TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      <div className="flex items-center gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex-shrink-0 flex items-center justify-center text-[10px] font-bold cursor-zoom-in hover:opacity-80 transition-opacity">
+                              {usuario.foto_perfil_url ? (
+                                <img src={usuario.foto_perfil_url} alt={usuario.nome} className="w-full h-full object-cover" />
+                              ) : (
+                                <>{usuario.nome[0]}{usuario.sobrenome[0]}</>
+                              )}
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                            <div className="relative w-full h-full flex items-center justify-center">
+                              {usuario.foto_perfil_url && (
+                                <img 
+                                  src={usuario.foto_perfil_url} 
+                                  alt={usuario.nome} 
+                                  className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                                />
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        <span>{usuario.nome} {usuario.sobrenome}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-foreground">{usuario.email}</TableCell>
                     <TableCell className="text-foreground">{usuario.telefone || "-"}</TableCell>
                     <TableCell>{getTipoBadge(usuario.tipo || "cidadao")}</TableCell>
@@ -617,6 +681,11 @@ const UsuariosPage = () => {
                             </DropdownMenuItem>
                           )}
                           
+                          <DropdownMenuItem onClick={() => { setSelectedUser(usuario); setShowPasswordModal(true); }}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            <span>{t('password')}</span>
+                          </DropdownMenuItem>
+                          
                           <DropdownMenuSeparator />
                           
                           {currentUser?.id !== usuario.id && (
@@ -641,9 +710,28 @@ const UsuariosPage = () => {
             <DialogHeader><DialogTitle>{t('user_details')}</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
-                  {selectedUser?.nome?.[0]}{selectedUser?.sobrenome?.[0]}
-                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary text-xl font-bold cursor-zoom-in hover:opacity-80 transition-opacity shadow-sm">
+                      {selectedUser?.foto_perfil_url ? (
+                        <img src={selectedUser.foto_perfil_url} alt={selectedUser.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <>{selectedUser?.nome?.[0]}{selectedUser?.sobrenome?.[0]}</>
+                      )}
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      {selectedUser?.foto_perfil_url && (
+                        <img 
+                          src={selectedUser.foto_perfil_url} 
+                          alt={selectedUser.nome} 
+                          className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                        />
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <div>
                   <h3 className="font-bold text-lg">{selectedUser?.nome} {selectedUser?.sobrenome}</h3>
                   <p className="text-sm text-muted-foreground">{selectedUser?.email}</p>
@@ -818,6 +906,84 @@ const UsuariosPage = () => {
           </div>
         )}
       </div>
+      {/* Modal de Alterar Senha */}
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para o usuário <strong>{selectedUser?.nome}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <Input 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar Senha</Label>
+              <Input 
+                type="password" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="Repita a nova senha"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleChangePassword} disabled={updating}>
+              {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar Senha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal de Alterar Senha */}
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para o usuário <strong>{selectedUser?.nome}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <Input 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar Senha</Label>
+              <Input 
+                type="password" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="Repita a nova senha"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleChangePassword} disabled={updating}>
+              {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar Senha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };

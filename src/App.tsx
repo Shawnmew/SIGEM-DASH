@@ -19,6 +19,7 @@ import Relatorios from "./pages/Relatorios";
 import CriseDetalhes from "./pages/CriseDetalhes";
 import LogsAuditoria from "./pages/LogsAuditoria";
 import TodasCrises from "./pages/TodasCrises";
+import Perfil from "./pages/Perfil";
 
 function App() {
   return (
@@ -73,6 +74,12 @@ function App() {
           <Route path="/todas-crises" element={
             <ProtectedRoute>
               <TodasCrises />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/perfil" element={
+            <ProtectedRoute>
+              <Perfil />
             </ProtectedRoute>
           } />
 
