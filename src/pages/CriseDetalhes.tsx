@@ -656,6 +656,10 @@ const CriseDetalhesPage = () => {
                                                                         {voluntario.user.email}
                                                                     </p>
                                                                 )}
+                                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                    <MapPin className="h-3 w-3" />
+                                                                    {voluntario.municipio?.nome || t('municipality_not_specified')}
+                                                                </p>
                                                             </div>
                                                         </div>
                                                     </div>

@@ -12,8 +12,16 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Filter, Search, Plus, Trash2, Edit, CheckCircle } from "lucide-react";
+import { Filter, Search, Plus, Trash2, Edit, CheckCircle, MoreHorizontal, Eye, Settings, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 interface Entidade {
   id: number;
@@ -92,6 +100,7 @@ const EntidadesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showApprove, setShowApprove] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<Entidade | null>(null);
   const [editEntity, setEditEntity] = useState<Entidade | null>(null);
   const [statusToApprove, setStatusToApprove] = useState<string>("");
@@ -459,7 +468,7 @@ const EntidadesPage = () => {
                   </div>
                   <div>
                     <Label>{t('company_name_label')} *</Label>
-                    <Input value={newEntity.nome} onChange={e => setNewEntity({...newEntity, nome: e.target.value})} className={formErrors.nome ? "border-red-500" : ""} />
+                    <Input value={newEntity.nome} onChange={e => setNewEntity({...newEntity, nome: e.target.value})} className={formErrors.nome ? "border-red-500 bg-muted cursor-not-allowed" : "bg-muted cursor-not-allowed"} disabled />
                     {formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}
                   </div>
                 </div>
@@ -513,70 +522,40 @@ const EntidadesPage = () => {
                   <TableCell>{entity.provincia_nome || "-"}</TableCell>
                   <TableCell>{entity.municipio_nome || "-"}</TableCell>
                   <TableCell>{getStatusBadge(entity.status)}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Dialog><DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => setSelectedEntity(entity)}>{t('view')}</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>{t('entity_details')}</DialogTitle></DialogHeader>
-                        <div className="space-y-2">
-                          <div><b>ID:</b> {selectedEntity?.id}</div>
-                          <div><b>{t('name')}:</b> {selectedEntity?.nome}</div>
-                          <div><b>{t('type')}:</b> {selectedEntity?.tipo === 'publica' ? t('public') : selectedEntity?.tipo === 'privada' ? t('private') : selectedEntity?.tipo === 'ong' ? 'ONG' : t('association')}</div>
-                          <div><b>{t('service')}:</b> {getServicoTipoLabel(selectedEntity?.servico_tipo)}</div>
-                          <div><b>{t('status')}:</b> {selectedEntity?.status}</div>
-                          <div><b>Email:</b> {selectedEntity?.email || "-"}</div>
-                          <div><b>Telefone:</b> {selectedEntity?.telefone || "-"}</div>
-                          <div><b>NIF:</b> {selectedEntity?.nif || "-"}</div>
-                          <div><b>Província:</b> {selectedEntity?.provincia_nome || "-"}</div>
-                          <div><b>Município:</b> {selectedEntity?.municipio_nome || "-"}</div>
-                          <div><b>Bairro:</b> {selectedEntity?.bairro || "-"}</div>
-                          <div><b>Endereço:</b> {selectedEntity?.endereco_completo || "-"}</div>
-                          <div><b>Responsável:</b> {selectedEntity?.responsavel || "-"}</div>
-                          <div><b>Horário:</b> {selectedEntity?.horario_funcionamento || "-"}</div>
-                          <div><b>{t('capacity')}:</b> {selectedEntity?.capacidade_pessoas || "-"} {t('people')}</div>
-                        </div>
-                        <DialogFooter><DialogClose asChild><Button variant="outline">{t('close')}</Button></DialogClose></DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Dialog open={showEdit && editEntity?.id === entity.id} onOpenChange={setShowEdit}>
-                      <DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setEditEntity(entity); setShowEdit(true); }}>{t('edit')}</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>{t('edit_entity')}</DialogTitle></DialogHeader>
-                        <form onSubmit={handleUpdateEntity} className="space-y-3">
-                          <Input value={editEntity?.nome || ""} onChange={e => setEditEntity(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" />
-                          <Input value={editEntity?.email || ""} onChange={e => setEditEntity(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
-                          <Input value={editEntity?.telefone || ""} onChange={e => setEditEntity(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder={t('phone')} />
-                          <DialogFooter><Button type="submit">{t('save')}</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowEdit(false)}>{t('cancel')}</Button></DialogClose></DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Dialog open={showApprove && selectedEntity?.id === entity.id} onOpenChange={setShowApprove}>
-                      <DialogTrigger asChild><Button size="sm" variant="outline" onClick={() => { setShowApprove(true); setSelectedEntity(entity); setStatusToApprove(entity.status); }}>{t('status')}</Button></DialogTrigger>
-                      <DialogContent><DialogHeader><DialogTitle>{t('change_status')}</DialogTitle></DialogHeader>
-                        <Select value={statusToApprove} onValueChange={setStatusToApprove}>
-                          <SelectTrigger><SelectValue placeholder={t('status')} /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="activo">Ativo</SelectItem>
-                            <SelectItem value="inactivo">Inativo</SelectItem>
-                            <SelectItem value="pendente">Pendente</SelectItem>
-                            <SelectItem value="bloqueado">{t('blocked')}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <DialogFooter><Button onClick={handleStatusChange}>{t('save')}</Button><DialogClose asChild><Button variant="outline" onClick={() => setShowApprove(false)}>{t('cancel')}</Button></DialogClose></DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => { 
-                        setSelectedEntity(entity); 
-                        setShowPasswordModal(true); 
-                      }}
-                    >
-                      {t('password')}
-                    </Button>
-                    
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteEntity(entity.id)}>{t('remove')}</Button>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Abrir menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => { setSelectedEntity(entity); setShowDetails(true); }}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          <span>Ver Detalhes</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setEditEntity(entity); setShowEdit(true); }}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          <span>Editar</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setSelectedEntity(entity); setStatusToApprove(entity.status); setShowApprove(true); }}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Alterar Status</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setSelectedEntity(entity); setShowPasswordModal(true); }}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          <span>Alterar Senha</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDeleteEntity(entity.id)} className="text-red-600 focus:text-red-600 font-medium">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Remover</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -604,6 +583,57 @@ const EntidadesPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modais de Ação */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{t('entity_details')}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <div><b>ID:</b> {selectedEntity?.id}</div>
+            <div><b>{t('name')}:</b> {selectedEntity?.nome}</div>
+            <div><b>{t('type')}:</b> {selectedEntity?.tipo === 'publica' ? t('public') : selectedEntity?.tipo === 'privada' ? t('private') : selectedEntity?.tipo === 'ong' ? 'ONG' : t('association')}</div>
+            <div><b>{t('service')}:</b> {getServicoTipoLabel(selectedEntity?.servico_tipo)}</div>
+            <div><b>{t('status')}:</b> {selectedEntity?.status}</div>
+            <div><b>Email:</b> {selectedEntity?.email || "-"}</div>
+            <div><b>Telefone:</b> {selectedEntity?.telefone || "-"}</div>
+            <div><b>NIF:</b> {selectedEntity?.nif || "-"}</div>
+            <div><b>Província:</b> {selectedEntity?.provincia_nome || "-"}</div>
+            <div><b>Município:</b> {selectedEntity?.municipio_nome || "-"}</div>
+            <div><b>Bairro:</b> {selectedEntity?.bairro || "-"}</div>
+            <div><b>Endereço:</b> {selectedEntity?.endereco_completo || "-"}</div>
+            <div><b>Responsável:</b> {selectedEntity?.responsavel || "-"}</div>
+            <div><b>Horário:</b> {selectedEntity?.horario_funcionamento || "-"}</div>
+            <div><b>{t('capacity')}:</b> {selectedEntity?.capacidade_pessoas || "-"} {t('people')}</div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowDetails(false)}>{t('close')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent><DialogHeader><DialogTitle>{t('edit_entity')}</DialogTitle></DialogHeader>
+          <form onSubmit={handleUpdateEntity} className="space-y-3">
+            <Input value={editEntity?.nome || ""} onChange={e => setEditEntity(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" className="bg-muted cursor-not-allowed" disabled />
+            <Input value={editEntity?.email || ""} onChange={e => setEditEntity(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
+            <Input value={editEntity?.telefone || ""} onChange={e => setEditEntity(prev => prev ? {...prev, telefone: e.target.value} : null)} placeholder={t('phone')} />
+            <DialogFooter><Button type="submit">{t('save')}</Button><Button type="button" variant="outline" onClick={() => setShowEdit(false)}>{t('cancel')}</Button></DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showApprove} onOpenChange={setShowApprove}>
+        <DialogContent><DialogHeader><DialogTitle>{t('change_status')}</DialogTitle></DialogHeader>
+          <Select value={statusToApprove} onValueChange={setStatusToApprove}>
+            <SelectTrigger><SelectValue placeholder={t('status')} /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="activo">Ativo</SelectItem>
+              <SelectItem value="inactivo">Inativo</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="bloqueado">{t('blocked')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter><Button onClick={handleStatusChange}>{t('save')}</Button><Button variant="outline" onClick={() => setShowApprove(false)}>{t('cancel')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Modal de Alterar Senha */}
       <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
         <DialogContent className="max-w-sm">
