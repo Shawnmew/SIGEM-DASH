@@ -301,9 +301,9 @@ const UsuariosPage = () => {
         }
         toast.error("Erro de validação: Verifique os campos destacados.");
       } else if (err.response?.status === 409) {
-        toast.error("Email já cadastrado no sistema.");
+        toast.error("Conflito: " + (err.response.data.message || "Dados já cadastrados no sistema."));
       } else {
-        toast.error("Erro ao cadastrar usuário.");
+        toast.error(err.response?.data?.message || "Erro ao cadastrar usuário.");
       }
     }
   };
@@ -325,8 +325,16 @@ const UsuariosPage = () => {
       setShowEdit(false);
       fetchUsuarios(page, search, tipo, status);
       toast.success("Usuário atualizado com sucesso!");
-    } catch (err) {
-      toast.error("Erro ao atualizar usuário.");
+    } catch (err: any) {
+      if (err.response?.status === 422) {
+        const backendErrors = err.response.data.errors;
+        if (backendErrors) {
+          const firstError = Object.values(backendErrors)[0] as string[];
+          toast.error(firstError[0] || "Erro de validação");
+        }
+      } else {
+        toast.error(err.response?.data?.message || "Erro ao atualizar usuário.");
+      }
     }
   };
 

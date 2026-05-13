@@ -5,11 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useToast } from "@/hooks/use-toast";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { signIn, loading, savedProfiles, switchProfile } = useAuth();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +36,10 @@ const LoginPage = () => {
     try {
       const success = await signIn(email, password);
       if (success) {
+        toast({
+          title: "Login bem-sucedido",
+          description: "Bem-vindo de volta ao sistema SIGEM.",
+        });
         navigate("/");
       } else {
         // O signIn já exibe o toast
