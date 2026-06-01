@@ -51,6 +51,7 @@ import {
     PaginationPrevious,
     PaginationNext,
 } from "@/components/ui/pagination";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface Voluntario {
     id: number;
@@ -464,6 +465,14 @@ const VoluntariosPage = () => {
                                                     </div>
                                                 </DialogTrigger>
                                                 <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                                                    <VisuallyHidden asChild>
+                                                        <DialogTitle>{t('profile_photo_preview')}</DialogTitle>
+                                                    </VisuallyHidden>
+                                                    <VisuallyHidden asChild>
+                                                        <DialogDescription>
+                                                            {t('profile_photo_preview_desc')}
+                                                        </DialogDescription>
+                                                    </VisuallyHidden>
                                                     <div className="relative w-full h-full flex items-center justify-center">
                                                         {vol.user?.foto_perfil_url && (
                                                             <img 
@@ -621,6 +630,14 @@ const VoluntariosPage = () => {
                                         </div>
                                     </DialogTrigger>
                                     <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                                        <VisuallyHidden asChild>
+                                            <DialogTitle>{t('profile_photo_preview')}</DialogTitle>
+                                        </VisuallyHidden>
+                                        <VisuallyHidden asChild>
+                                            <DialogDescription>
+                                                {t('profile_photo_preview_desc')}
+                                            </DialogDescription>
+                                        </VisuallyHidden>
                                         <div className="relative w-full h-full flex items-center justify-center">
                                             {selectedVoluntario.user?.foto_perfil_url && (
                                                 <img 

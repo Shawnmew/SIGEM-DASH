@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -787,6 +787,11 @@ const CriseDetalhesPage = () => {
                 <DialogContent className="max-w-4xl max-h-[90vh] p-0 bg-black/95">
                     <VisuallyHidden asChild>
                         <DialogTitle>{t('media_preview')}</DialogTitle>
+                    </VisuallyHidden>
+                    <VisuallyHidden asChild>
+                        <DialogDescription>
+                            {t('media_preview_description')}
+                        </DialogDescription>
                     </VisuallyHidden>
                     <DialogClose className="absolute right-4 top-4 z-50 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition-colors">
                         <X className="h-5 w-5" />

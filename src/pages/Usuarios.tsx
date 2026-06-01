@@ -12,6 +12,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { 
@@ -616,6 +617,14 @@ const UsuariosPage = () => {
                             </div>
                           </DialogTrigger>
                           <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                            <VisuallyHidden asChild>
+                              <DialogTitle>{t('profile_photo_preview')}</DialogTitle>
+                            </VisuallyHidden>
+                            <VisuallyHidden asChild>
+                              <DialogDescription>
+                                {t('profile_photo_preview_desc')}
+                              </DialogDescription>
+                            </VisuallyHidden>
                             <div className="relative w-full h-full flex items-center justify-center">
                               {usuario.foto_perfil_url && (
                                 <img 
@@ -715,7 +724,12 @@ const UsuariosPage = () => {
         {/* Modais fora do loop para melhor performance */}
         <Dialog open={showDetails} onOpenChange={setShowDetails}>
           <DialogContent>
-            <DialogHeader><DialogTitle>{t('user_details')}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{t('user_details')}</DialogTitle>
+              <VisuallyHidden asChild>
+                <DialogDescription>{t('user_details_desc')}</DialogDescription>
+              </VisuallyHidden>
+            </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4">
                 <Dialog>
@@ -729,6 +743,14 @@ const UsuariosPage = () => {
                     </div>
                   </DialogTrigger>
                   <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none">
+                    <VisuallyHidden asChild>
+                      <DialogTitle>{t('profile_photo_preview')}</DialogTitle>
+                    </VisuallyHidden>
+                    <VisuallyHidden asChild>
+                      <DialogDescription>
+                        {t('profile_photo_preview_desc')}
+                      </DialogDescription>
+                    </VisuallyHidden>
                     <div className="relative w-full h-full flex items-center justify-center">
                       {selectedUser?.foto_perfil_url && (
                         <img 
@@ -779,7 +801,12 @@ const UsuariosPage = () => {
 
         <Dialog open={showEdit} onOpenChange={setShowEdit}>
           <DialogContent>
-            <DialogHeader><DialogTitle>{t('edit_user')}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{t('edit_user')}</DialogTitle>
+              <VisuallyHidden asChild>
+                <DialogDescription>{t('edit_user_desc')}</DialogDescription>
+              </VisuallyHidden>
+            </DialogHeader>
             <form onSubmit={handleUpdateUser} className="space-y-3 pt-4">
               <div className="space-y-1">
                 <Label>{t('name')}</Label>
@@ -819,7 +846,12 @@ const UsuariosPage = () => {
 
         <Dialog open={showApprove} onOpenChange={setShowApprove}>
           <DialogContent>
-            <DialogHeader><DialogTitle>{t('change_status_title')}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{t('change_status_title')}</DialogTitle>
+              <VisuallyHidden asChild>
+                <DialogDescription>{t('change_status_desc')}</DialogDescription>
+              </VisuallyHidden>
+            </DialogHeader>
             <div className="py-4 space-y-4">
               <div className="bg-muted p-3 rounded-md">
                 <p className="text-sm">{t('user')}: <b>{selectedUser?.nome} {selectedUser?.sobrenome}</b></p>
@@ -854,6 +886,9 @@ const UsuariosPage = () => {
                 <AlertTriangle className="h-5 w-5 text-orange-500" />
                 {t('penalize_user')}
               </DialogTitle>
+              <VisuallyHidden asChild>
+                <DialogDescription>{t('penalize_user_desc')}</DialogDescription>
+              </VisuallyHidden>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <p className="text-sm text-muted-foreground">

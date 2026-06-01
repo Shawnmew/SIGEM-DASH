@@ -11,6 +11,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import { Filter, Search, Plus, Trash2, Edit, CheckCircle, MoreHorizontal, Eye, Settings, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -441,7 +442,12 @@ const EntidadesPage = () => {
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild><Button>+ {t('new_entity')}</Button></DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>{t('register_new_entity')}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>{t('register_new_entity')}</DialogTitle>
+                <VisuallyHidden asChild>
+                  <DialogDescription>{t('register_new_entity_desc')}</DialogDescription>
+                </VisuallyHidden>
+              </DialogHeader>
               <form onSubmit={handleCreateEntity} className="space-y-4">
                 <div className="flex flex-col gap-4">
                   <div className="grid grid-cols-1 gap-2">
@@ -587,7 +593,12 @@ const EntidadesPage = () => {
       {/* Modais de Ação */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{t('entity_details')}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{t('entity_details')}</DialogTitle>
+            <VisuallyHidden asChild>
+              <DialogDescription>{t('entity_details_desc')}</DialogDescription>
+            </VisuallyHidden>
+          </DialogHeader>
           <div className="space-y-2">
             <div><b>ID:</b> {selectedEntity?.id}</div>
             <div><b>{t('name')}:</b> {selectedEntity?.nome}</div>
@@ -610,7 +621,13 @@ const EntidadesPage = () => {
       </Dialog>
 
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent><DialogHeader><DialogTitle>{t('edit_entity')}</DialogTitle></DialogHeader>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('edit_entity')}</DialogTitle>
+            <VisuallyHidden asChild>
+              <DialogDescription>{t('edit_entity_desc')}</DialogDescription>
+            </VisuallyHidden>
+          </DialogHeader>
           <form onSubmit={handleUpdateEntity} className="space-y-3">
             <Input value={editEntity?.nome || ""} onChange={e => setEditEntity(prev => prev ? {...prev, nome: e.target.value} : null)} placeholder="Nome" className="bg-muted cursor-not-allowed" disabled />
             <Input value={editEntity?.email || ""} onChange={e => setEditEntity(prev => prev ? {...prev, email: e.target.value} : null)} placeholder="Email" />
@@ -621,7 +638,13 @@ const EntidadesPage = () => {
       </Dialog>
 
       <Dialog open={showApprove} onOpenChange={setShowApprove}>
-        <DialogContent><DialogHeader><DialogTitle>{t('change_status')}</DialogTitle></DialogHeader>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('change_status')}</DialogTitle>
+            <VisuallyHidden asChild>
+              <DialogDescription>{t('change_status_desc')}</DialogDescription>
+            </VisuallyHidden>
+          </DialogHeader>
           <Select value={statusToApprove} onValueChange={setStatusToApprove}>
             <SelectTrigger><SelectValue placeholder={t('status')} /></SelectTrigger>
             <SelectContent>
