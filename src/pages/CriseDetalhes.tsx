@@ -544,7 +544,7 @@ const CriseDetalhesPage = () => {
                     <TabsContent value="midias">
                         <Card>
                             <CardHeader>
-                                <CardTitle>{t('media_description')}</CardTitle>
+                                <CardTitle>{t('incident_media')}</CardTitle>
                                 <p className="text-sm text-muted-foreground">
                                     {t('click_to_enlarge')}
                                 </p>
