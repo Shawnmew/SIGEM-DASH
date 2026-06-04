@@ -36,9 +36,9 @@ jobs:
       - name: SPA Redirect Hack for GitHub Pages
         run: cp dist/index.html dist/404.html
 
-      - name: Deploy build to production branch
+      - name: Deploy build to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: production
+          branch: gh-pages
           folder: dist
           clean: true
