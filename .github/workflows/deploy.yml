@@ -1,9 +1,9 @@
-name: Build and Deploy to Production Branch
+name: Build and Deploy to Production
 
 on:
   push:
     branches:
-      - final
+      - production
 
 # Sets permissions of the GITHUB_TOKEN to allow pushing to the repository
 permissions:
