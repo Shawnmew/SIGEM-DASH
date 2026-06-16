@@ -237,23 +237,38 @@ const UsuariosPage = () => {
 
     setLoadingNif(true);
     try {
-      const response = await api.get('/nif', { params: { nif } });
+      const response = await api.get('/bi', { params: { bi: nif } });
       if (response.data.success && response.data.data) {
-        const { nome } = response.data.data;
-        // Split name into nome and sobrenome
-        const parts = nome.trim().split(' ');
-        const first = parts[0];
-        const last = parts.length > 1 ? parts.slice(1).join(' ') : "";
+        const { nome, apelido } = response.data.data;
+        
+        let first = nome;
+        let last = "";
+        
+        if (apelido && apelido.trim()) {
+          const cleanApelido = apelido.trim();
+          if (nome.endsWith(cleanApelido)) {
+            first = nome.substring(0, nome.length - cleanApelido.length).trim();
+            last = cleanApelido;
+          } else {
+            const parts = nome.trim().split(' ');
+            first = parts[0];
+            last = parts.length > 1 ? parts.slice(1).join(' ') : "";
+          }
+        } else {
+          const parts = nome.trim().split(' ');
+          first = parts[0];
+          last = parts.length > 1 ? parts.slice(1).join(' ') : "";
+        }
         
         setNewUser({
           ...newUser,
           nome: first,
           sobrenome: last
         });
-        toast.success("Dados do NIF carregados automaticamente.");
+        toast.success("Dados do BI/NIF carregados automaticamente.");
       }
     } catch (error) {
-      console.error("Erro ao buscar NIF:", error);
+      console.error("Erro ao buscar BI:", error);
       // Don't show toast error here to not be annoying if they just typed it wrong
     } finally {
       setLoadingNif(false);

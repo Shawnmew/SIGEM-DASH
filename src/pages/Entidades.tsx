@@ -221,7 +221,7 @@ const EntidadesPage = () => {
 
     setLoadingNif(true);
     try {
-      const response = await api.get('/nif', { params: { nif } });
+      const response = await api.get('/bi', { params: { bi: nif } });
       if (response.data.success && response.data.data) {
         const { nome } = response.data.data;
         setNewEntity({
@@ -231,7 +231,7 @@ const EntidadesPage = () => {
         toast.success("Nome da entidade carregado automaticamente.");
       }
     } catch (error) {
-      console.error("Erro ao buscar NIF:", error);
+      console.error("Erro ao buscar BI:", error);
     } finally {
       setLoadingNif(false);
     }

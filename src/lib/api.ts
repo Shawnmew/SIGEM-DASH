@@ -1,7 +1,7 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-export const SERVER_URL = 'https://sigem.store';
+export const SERVER_URL = 'http://sigem.store';
 
 const api = axios.create({
     baseURL: `${SERVER_URL}/api`,
