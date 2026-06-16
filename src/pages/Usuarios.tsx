@@ -52,6 +52,14 @@ interface Usuario {
   reputation_score?: number;
   suspended_until?: string;
   foto_perfil_url?: string | null;
+  genero?: string;
+  data_nasc?: string;
+  naturalidade?: string;
+  nacionalidade_nome?: string;
+  pai_nome_completo?: string;
+  mae_nome_completo?: string;
+  estado_civil?: string;
+  nif_bi?: string;
 }
 
 interface Meta {
@@ -86,6 +94,13 @@ interface NewUser {
   municipio_id: string;
   status: string;
   nif: string;
+  genero: string;
+  data_nasc: string;
+  naturalidade: string;
+  nacionalidade_nome: string;
+  pai_nome_completo: string;
+  mae_nome_completo: string;
+  estado_civil: string;
 }
 
 const UsuariosPage = () => {
@@ -126,7 +141,14 @@ const UsuariosPage = () => {
     tipo: "cidadao",
     municipio_id: "",
     status: "pendente",
-    nif: ""
+    nif: "",
+    genero: "",
+    data_nasc: "",
+    naturalidade: "",
+    nacionalidade_nome: "",
+    pai_nome_completo: "",
+    mae_nome_completo: "",
+    estado_civil: ""
   });
 
   const [loadingNif, setLoadingNif] = useState(false);
@@ -239,7 +261,7 @@ const UsuariosPage = () => {
     try {
       const response = await api.get('/bi', { params: { bi: nif } });
       if (response.data.success && response.data.data) {
-        const { nome, apelido } = response.data.data;
+        const { nome, apelido, data_nasc, genero, naturalidade, nacionalidade_nome, pai_nome_completo, mae_nome_completo, estado_civil } = response.data.data;
         
         let first = nome;
         let last = "";
@@ -263,7 +285,14 @@ const UsuariosPage = () => {
         setNewUser({
           ...newUser,
           nome: first,
-          sobrenome: last
+          sobrenome: last,
+          genero: genero || "",
+          data_nasc: data_nasc || "",
+          naturalidade: naturalidade || "",
+          nacionalidade_nome: nacionalidade_nome || "",
+          pai_nome_completo: pai_nome_completo || "",
+          mae_nome_completo: mae_nome_completo || "",
+          estado_civil: estado_civil || ""
         });
         toast.success("Dados do BI/NIF carregados automaticamente.");
       }
@@ -289,7 +318,15 @@ const UsuariosPage = () => {
         telefone: newUser.telefone?.trim() || null,
         tipo: newUser.tipo,
         municipio_id: newUser.municipio_id ? parseInt(newUser.municipio_id) : null,
-        status: newUser.status
+        status: newUser.status,
+        nif_bi: newUser.nif ? newUser.nif.trim() : null,
+        genero: newUser.genero || null,
+        data_nasc: newUser.data_nasc || null,
+        naturalidade: newUser.naturalidade || null,
+        nacionalidade_nome: newUser.nacionalidade_nome || null,
+        pai_nome_completo: newUser.pai_nome_completo || null,
+        mae_nome_completo: newUser.mae_nome_completo || null,
+        estado_civil: newUser.estado_civil || null
       };
 
       const response = await api.post("/admin/users", userData);
@@ -298,7 +335,9 @@ const UsuariosPage = () => {
         setShowCreate(false);
         setNewUser({
           nome: "", sobrenome: "", email: "", password: "", password_confirmation: "",
-          telefone: "", tipo: "cidadao", municipio_id: "", status: "pendente", nif: ""
+          telefone: "", tipo: "cidadao", municipio_id: "", status: "pendente", nif: "",
+          genero: "", data_nasc: "", naturalidade: "", nacionalidade_nome: "",
+          pai_nome_completo: "", mae_nome_completo: "", estado_civil: ""
         });
         setFormErrors({});
         fetchUsuarios(1, search, tipo, status);
@@ -559,8 +598,24 @@ const UsuariosPage = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Nome *</Label><Input value={newUser.nome} onChange={e => setNewUser({...newUser, nome: e.target.value})} className={formErrors.nome ? "border-red-500 bg-muted" : "bg-muted cursor-not-allowed"} disabled />{formErrors.nome && <p className="text-xs text-red-500">{formErrors.nome}</p>}</div>
-                  <div><Label>Sobrenome *</Label><Input value={newUser.sobrenome} onChange={e => setNewUser({...newUser, sobrenome: e.target.value})} className={formErrors.sobrenome ? "border-red-500 bg-muted" : "bg-muted cursor-not-allowed"} disabled />{formErrors.sobrenome && <p className="text-xs text-red-500">{formErrors.sobrenome}</p>}</div>
+                  <div><Label>Nome *</Label><Input value={newUser.nome} className="bg-muted cursor-not-allowed" disabled /></div>
+                  <div><Label>Sobrenome *</Label><Input value={newUser.sobrenome} className="bg-muted cursor-not-allowed" disabled /></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Gênero</Label><Input value={newUser.genero ? (newUser.genero === 'M' ? 'Masculino' : newUser.genero === 'F' ? 'Feminino' : newUser.genero) : ''} className="bg-muted cursor-not-allowed" disabled placeholder="Preenchido via consulta" /></div>
+                  <div><Label>Data de Nascimento</Label><Input value={newUser.data_nasc} className="bg-muted cursor-not-allowed" disabled placeholder="Preenchido via consulta" /></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Naturalidade</Label><Input value={newUser.naturalidade} className="bg-muted cursor-not-allowed" disabled placeholder="Preenchido via consulta" /></div>
+                  <div><Label>Nacionalidade</Label><Input value={newUser.nacionalidade_nome} className="bg-muted cursor-not-allowed" disabled placeholder="Preenchido via consulta" /></div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-1"><Label>Estado Civil</Label><Input value={newUser.estado_civil} className="bg-muted cursor-not-allowed" disabled placeholder="Preenchido via consulta" /></div>
+                  <div className="col-span-1"><Label>Pai (Nome Completo)</Label><Input value={newUser.pai_nome_completo} className="bg-muted cursor-not-allowed" disabled placeholder="Preenchido via consulta" /></div>
+                  <div className="col-span-1"><Label>Mãe (Nome Completo)</Label><Input value={newUser.mae_nome_completo} className="bg-muted cursor-not-allowed" disabled placeholder="Preenchido via consulta" /></div>
                 </div>
                 <div><Label>Email *</Label><Input type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className={formErrors.email ? "border-red-500" : ""} />{formErrors.email && <p className="text-xs text-red-500">{formErrors.email}</p>}</div>
                 <div><Label>Senha *</Label><Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className={formErrors.password ? "border-red-500" : ""} />{formErrors.password && <p className="text-xs text-red-500">{formErrors.password}</p>}</div>
@@ -808,6 +863,54 @@ const UsuariosPage = () => {
                   <p className="text-xs text-muted-foreground">{t('member_since')}</p>
                   <p className="text-sm font-medium">{selectedUser?.created_at ? new Date(selectedUser.created_at).toLocaleDateString() : "-"}</p>
                 </div>
+                {selectedUser?.nif_bi && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">BI / NIF</p>
+                    <p className="text-sm font-medium">{selectedUser.nif_bi}</p>
+                  </div>
+                )}
+                {selectedUser?.genero && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Género</p>
+                    <p className="text-sm font-medium">{selectedUser.genero === 'M' ? 'Masculino' : selectedUser.genero === 'F' ? 'Feminino' : selectedUser.genero}</p>
+                  </div>
+                )}
+                {selectedUser?.data_nasc && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Data de Nascimento</p>
+                    <p className="text-sm font-medium">{selectedUser.data_nasc}</p>
+                  </div>
+                )}
+                {selectedUser?.estado_civil && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Estado Civil</p>
+                    <p className="text-sm font-medium capitalize">{selectedUser.estado_civil.toLowerCase()}</p>
+                  </div>
+                )}
+                {selectedUser?.naturalidade && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Naturalidade</p>
+                    <p className="text-sm font-medium">{selectedUser.naturalidade}</p>
+                  </div>
+                )}
+                {selectedUser?.nacionalidade_nome && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Nacionalidade</p>
+                    <p className="text-sm font-medium">{selectedUser.nacionalidade_nome}</p>
+                  </div>
+                )}
+                {selectedUser?.pai_nome_completo && (
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-xs text-muted-foreground">Filiação (Pai)</p>
+                    <p className="text-sm font-medium">{selectedUser.pai_nome_completo}</p>
+                  </div>
+                )}
+                {selectedUser?.mae_nome_completo && (
+                  <div className="space-y-1 col-span-2">
+                    <p className="text-xs text-muted-foreground">Filiação (Mãe)</p>
+                    <p className="text-sm font-medium">{selectedUser.mae_nome_completo}</p>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter><Button variant="outline" onClick={() => setShowDetails(false)}>{t('close')}</Button></DialogFooter>
