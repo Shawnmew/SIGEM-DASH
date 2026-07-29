@@ -1,6 +1,7 @@
 // src/pages/Index.tsx
 import { useEffect, useState } from "react";
 import { VideoGrid } from "@/components/VideoGrid";
+import { DashboardIncidentMap } from "@/components/DashboardIncidentMap";
 import { AppLayout } from "@/components/AppLayout";
 import { 
     AlertTriangle, 
@@ -312,6 +313,11 @@ const Dashboard = () => {
                     </div>
                 </div>
             )}
+
+            {/* Mapa Cartográfico Interativo Section */}
+            <div className="mb-8">
+                <DashboardIncidentMap provinciaId={selectedProvincia} municipioId={selectedMunicipio} />
+            </div>
 
             {/* Vídeos e Mídias Section */}
             <div className="mb-8">
