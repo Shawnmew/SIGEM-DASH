@@ -313,9 +313,9 @@ const Dashboard = () => {
                 </div>
             )}
 
-            {/* Vídeos Section */}
+            {/* Vídeos e Mídias Section */}
             <div className="mb-8">
-                <VideoGrid />
+                <VideoGrid provinciaId={selectedProvincia} municipioId={selectedMunicipio} />
             </div>
 
             {/* Charts */}

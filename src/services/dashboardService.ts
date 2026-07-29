@@ -46,6 +46,7 @@ export interface RegionImpact {
 export interface VideoItem {
     id: number;
     url: string;
+    tipo_midia?: string;
     title: string;
     location: string;
     time: string;
@@ -84,9 +85,14 @@ export const dashboardService = {
         return response.data.data;
     },
 
-    async getVideoFeed(): Promise<VideoItem[]> {
+    async getVideoFeed(provinciaId?: string, municipioId?: string): Promise<VideoItem[]> {
         try {
-            const response = await api.get('/dashboard/recent-videos');
+            const response = await api.get('/dashboard/recent-videos', {
+                params: {
+                    provincia_id: provinciaId !== 'all' ? provinciaId : undefined,
+                    municipio_id: municipioId !== 'all' ? municipioId : undefined
+                }
+            });
             return response.data.data || [];
         } catch (error) {
             console.error("Erro ao carregar vídeos:", error);
