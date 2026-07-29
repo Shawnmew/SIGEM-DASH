@@ -259,7 +259,7 @@ const UsuariosPage = () => {
 
     setLoadingNif(true);
     try {
-      const response = await api.post('/bi', { bi: nif });
+      const response = await api.post('/verify-identity', { bi: nif });
       if (response.data.success && response.data.data) {
         const { nome, apelido, data_nasc, genero, naturalidade, nacionalidade_nome, pai_nome_completo, mae_nome_completo, estado_civil } = response.data.data;
         

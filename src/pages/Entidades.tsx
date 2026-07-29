@@ -221,7 +221,7 @@ const EntidadesPage = () => {
 
     setLoadingNif(true);
     try {
-      const response = await api.post('/bi', { bi: nif });
+      const response = await api.post('/verify-identity', { bi: nif });
       if (response.data.success && response.data.data) {
         const { nome } = response.data.data;
         setNewEntity({

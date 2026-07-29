@@ -32,7 +32,7 @@ export const nifService = {
      */
     async consultaNif(nif: string): Promise<NifResponse> {
         try {
-            const response = await api.post('/bi', { bi: nif });
+            const response = await api.post('/verify-identity', { bi: nif });
             return response.data;
         } catch (error: any) {
             console.error('Erro ao consultar BI/NIF:', error);
