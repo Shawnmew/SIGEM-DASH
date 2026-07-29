@@ -31,6 +31,7 @@ yarn-error.log*
 *.tsbuildinfo
 
 # Vite
+.vite/
 vite.config.ts.timestamp-*
 
 # Testing
