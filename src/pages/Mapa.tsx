@@ -48,11 +48,12 @@ interface Incidente {
 
 const getStatusColor = (status: string) => {
     switch (status) {
-        case 'critico': return '#ef4444';
-        case 'em_andamento': return '#f97316';
-        case 'confirmado': return '#eab308';
-        case 'pendente': return '#3b82f6';
-        case 'resolvido': return '#22c55e';
+        case 'critico': return '#ef4444'; // Vermelho
+        case 'em_andamento': return '#f97316'; // Laranja
+        case 'confirmado': return '#f59e0b'; // Âmbar
+        case 'pendente': return '#eab308'; // Amarelo
+        case 'em_analise': return '#3b82f6'; // Azul
+        case 'resolvido': return '#22c55e'; // Verde
         default: return '#6b7280';
     }
 };
@@ -63,6 +64,7 @@ const getStatusLabel = (status: string, t: any) => {
         case 'em_andamento': return t('in_progress');
         case 'confirmado': return t('confirmed');
         case 'pendente': return t('pending');
+        case 'em_analise': return 'Em Análise';
         case 'resolvido': return t('resolved_status');
         default: return status;
     }
@@ -70,12 +72,19 @@ const getStatusLabel = (status: string, t: any) => {
 
 const createCustomIcon = (status: string) => {
     const color = getStatusColor(status);
+    const html = `
+      <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+        <div style="background-color: ${color}; width: 26px; height: 26px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background-color: white;"></div>
+        </div>
+      </div>
+    `;
     return L.divIcon({
         className: 'custom-leaflet-icon',
-        html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;"></div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-        popupAnchor: [0, -12],
+        html: html,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16],
     });
 };
 
@@ -224,10 +233,12 @@ const MapaPage = () => {
                         </div>
                         <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 text-xs text-center text-gray-500">
                             <strong>{t('legend')}:</strong>
-                            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
-                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> {t('critical')}</div>
-                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> {t('in_progress')}</div>
-                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> {t('confirmed')}</div>
+                            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2 text-[11px]">
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> {t('critical')}</div>
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div> {t('in_progress')}</div>
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div> {t('pending')}</div>
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div> Em Análise</div>
+                                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> {t('resolved_status')}</div>
                             </div>
                         </div>
                     </div>
