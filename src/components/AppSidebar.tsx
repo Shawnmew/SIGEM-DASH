@@ -18,6 +18,7 @@ import {
   Moon,
   Activity,
   User,
+  Home,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,7 @@ const adminNavItems = [
   { title: "all_crises", icon: AlertTriangle, path: "/todas-crises" },
   { title: "report", icon: Plus, path: "/reportar" },
   { title: "risk_map", icon: MapPin, path: "/mapa" },
+  { title: "abrigos", icon: Home, path: "/abrigos" },
   { title: "volunteers", icon: Users, path: "/voluntarios" },
   { title: "reports", icon: FileText, path: "/relatorios" },
   { title: "alerts", icon: Bell, path: "/alertas" },
@@ -44,6 +46,7 @@ const entidadeNavItems = [
   { title: "all_crises", icon: AlertTriangle, path: "/todas-crises" },
   { title: "report", icon: Plus, path: "/reportar" },
   { title: "risk_map", icon: MapPin, path: "/mapa" },
+  { title: "abrigos", icon: Home, path: "/abrigos" },
   { title: "volunteers", icon: Users, path: "/voluntarios" },
   { title: "reports", icon: FileText, path: "/relatorios" },
   { title: "alerts", icon: Bell, path: "/alertas" },

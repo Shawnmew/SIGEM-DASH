@@ -37,6 +37,7 @@ const resources = {
       "all_crises": "Todas as Crises",
       "report": "Reportar",
       "risk_map": "Mapa de Risco",
+      "abrigos": "Abrigos de Socorro",
       "alerts": "Alertas",
       "audit_logs": "Logs de Auditoria",
       "add_account": "Adicionar conta",

@@ -20,6 +20,7 @@ import CriseDetalhes from "./pages/CriseDetalhes";
 import LogsAuditoria from "./pages/LogsAuditoria";
 import TodasCrises from "./pages/TodasCrises";
 import Perfil from "./pages/Perfil";
+import Abrigos from "./pages/Abrigos";
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
           <Route path="/crises" element={<ProtectedRoute><Crises /></ProtectedRoute>} />
           <Route path="/crises/:id" element={<ProtectedRoute><CriseDetalhes /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
+          <Route path="/abrigos" element={<ProtectedRoute><Abrigos /></ProtectedRoute>} />
           <Route path="/logs-auditoria" element={
             <ProtectedRoute requireAdmin>
               <LogsAuditoria />
