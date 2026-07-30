@@ -334,6 +334,11 @@ const CriseDetalhesPage = () => {
                                         {status.label}
                                     </span>
                                 </Badge>
+                                {incidente.origem === 'ivr_telefone_analogico' && (
+                                    <Badge variant="outline" className="border-purple-500 text-purple-700 bg-purple-50 dark:bg-purple-950/40 flex items-center gap-1 font-semibold">
+                                        📞 Chamada de Voz (Telefone Analógico {incidente.telefone_remetente ? `• ${incidente.telefone_remetente}` : ''})
+                                    </Badge>
+                                )}
                                 <span className="text-xs text-muted-foreground">
                                     {t('reported_ago', { time: getTimeAgo(incidente.created_at) })}
                                 </span>
