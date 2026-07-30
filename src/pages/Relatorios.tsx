@@ -314,98 +314,151 @@ const RelatoriosPage = () => {
     }));
 
   const exportExcel = () => {
-    const rows = getExportRows();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [
-      { wch: 8 }, { wch: 40 }, { wch: 15 }, { wch: 12 },
-      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
-      { wch: 18 }, { wch: 12 },
-    ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Relatório de Crises");
-    XLSX.writeFile(wb, `relatorio_crises_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success("Relatório Excel exportado com sucesso!");
+    try {
+      const rows = getExportRows();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [
+        { wch: 8 }, { wch: 40 }, { wch: 20 }, { wch: 15 },
+        { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 15 },
+        { wch: 18 }, { wch: 15 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Relatório Executive SIGEM");
+      XLSX.writeFile(wb, `SIGEM_Relatorio_Executivo_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success("Relatório Excel exportado com sucesso!");
+    } catch (e) {
+      console.error("Erro ao exportar Excel:", e);
+      toast.error("Erro ao gerar relatório Excel");
+    }
   };
 
   const exportPDF = () => {
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    
-    doc.setFillColor(239, 68, 68);
-    doc.rect(0, 0, 297, 45, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont("helvetica", "bold");
-    doc.text("RELATÓRIO DE CRISES", 20, 20);
-    doc.setFontSize(11);
-    doc.text("Sistema Integrado de Gestão de Emergências", 20, 32);
-    doc.setTextColor(200, 200, 200);
-    doc.setFontSize(9);
-    doc.text(`Gerado em: ${new Date().toLocaleString("pt-PT")}`, 20, 40);
-    
-    doc.setTextColor(0, 0, 0);
-    
-    doc.setFillColor(239, 68, 68);
-    doc.roundedRect(20, 55, 60, 25, 3, 3, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.text(filtered.length.toString(), 35, 72);
-    doc.setFontSize(9);
-    doc.text("Total Ocorrências", 32, 78);
-    
-    doc.setFillColor(34, 197, 94);
-    doc.roundedRect(85, 55, 60, 25, 3, 3, "F");
-    doc.text(resolvedCrises.toString(), 100, 72);
-    doc.text("Resolvidas", 105, 78);
-    
-    doc.setFillColor(59, 130, 246);
-    doc.roundedRect(150, 55, 60, 25, 3, 3, "F");
-    doc.text(totalAffected.toLocaleString(), 155, 72);
-    doc.text("Pessoas Afetadas", 158, 78);
-    
-    doc.setFillColor(249, 115, 22);
-    doc.roundedRect(215, 55, 60, 25, 3, 3, "F");
-    doc.text(totalVolunteers.toString(), 220, 72);
-    doc.text("Voluntários", 228, 78);
-    
-    const rows = getExportRows();
-    const headers = ["Título", "Tipo", "Severidade", "Estado", "Província", "Afetados"];
-    
-    autoTable(doc, {
-      startY: 95,
-      head: [headers],
-      body: rows.map((r) => [
-        r.Título.substring(0, 40),
-        r.Tipo,
-        r.Severidade,
-        r.Estado,
-        r.Província,
-        r["Pessoas Afetadas"].toLocaleString(),
-      ]),
-      theme: "striped",
-      headStyles: { fillColor: [239, 68, 68], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
-      styles: { fontSize: 8, cellPadding: 3, valign: "middle" },
-      columnStyles: {
-        0: { cellWidth: 60 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 30 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 25, halign: "right" },
-      },
-      alternateRowStyles: { fillColor: [248, 248, 248] },
-    });
-    
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
+    try {
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      
+      // Cabeçalho institucional topo (Vermelho SIGEM)
+      doc.setFillColor(220, 38, 38);
+      doc.rect(0, 0, 297, 38, "F");
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("SIGEM - RELATÓRIO EXECUTIVO DE EMERGÊNCIAS", 15, 18);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text("República de Angola • Centro de Comando Integrado de Emergências", 15, 26);
       doc.setFontSize(8);
-      doc.setTextColor(128, 128, 128);
-      doc.text(`Página ${i} de ${pageCount}`, 280, 195, { align: "right" });
-      doc.text("SIGEM - Sistema Integrado de Gestão de Emergências", 148, 195, { align: "center" });
+      doc.text(`Emissão: ${new Date().toLocaleString("pt-AO")}`, 15, 33);
+      
+      // Cartões de Resumo KPI (Top Stats)
+      const cardY = 44;
+      const cardW = 62;
+      const cardH = 22;
+
+      // Card 1: Total
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(15, cardY, cardW, cardH, 2, 2, "F");
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text("TOTAL OCORRÊNCIAS", 20, cardY + 7);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(filtered.length.toString(), 20, cardY + 17);
+
+      // Card 2: Resolvidas
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(83, cardY, cardW, cardH, 2, 2, "F");
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 116, 139);
+      doc.text("CRISES RESOLVIDAS", 88, cardY + 7);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(22, 163, 74);
+      doc.text(resolvedCrises.toString(), 88, cardY + 17);
+
+      // Card 3: Afetados
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(151, cardY, cardW, cardH, 2, 2, "F");
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 116, 139);
+      doc.text("POPULAÇÃO AFETADA", 156, cardY + 7);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(220, 38, 38);
+      doc.text(totalAffected.toLocaleString("pt-AO"), 156, cardY + 17);
+
+      // Card 4: Voluntários Mobilizados
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(219, cardY, cardW, cardH, 2, 2, "F");
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 116, 139);
+      doc.text("VOLUNTÁRIOS ATIVOS", 224, cardY + 7);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(37, 99, 235);
+      doc.text(totalVolunteers.toString(), 224, cardY + 17);
+
+      // Tabela de Ocorrências
+      const rows = getExportRows();
+      const headers = ["ID", "Título", "Categoria", "Severidade", "Estado", "Província", "Município", "Afetados"];
+
+      autoTable(doc, {
+        startY: 72,
+        head: [headers],
+        body: rows.map((r) => [
+          `#${r.ID}`,
+          r.Título.length > 35 ? r.Título.substring(0, 35) + "..." : r.Título,
+          r.Tipo,
+          r.Severidade,
+          r.Estado,
+          r.Província,
+          r.Região,
+          r["Pessoas Afetadas"].toLocaleString("pt-AO"),
+        ]),
+        theme: "striped",
+        headStyles: { 
+          fillColor: [220, 38, 38], 
+          textColor: [255, 255, 255], 
+          fontStyle: "bold", 
+          halign: "left",
+          fontSize: 8,
+          cellPadding: 3
+        },
+        styles: { fontSize: 8, cellPadding: 2.5, valign: "middle" },
+        columnStyles: {
+          0: { cellWidth: 15 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 30 },
+          6: { cellWidth: 30 },
+          7: { cellWidth: 25, halign: "right" },
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 15, right: 15 },
+      });
+
+      // Rodapé institucional
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text("SIGEM • Plataforma Nacional de Gestão de Emergências de Angola", 15, 202);
+        doc.text(`Página ${i} de ${pageCount}`, 282, 202, { align: "right" });
+      }
+
+      doc.save(`SIGEM_Relatorio_Executivo_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Relatório PDF executivo exportado com sucesso!");
+    } catch (e) {
+      console.error("Erro ao gerar PDF:", e);
+      toast.error("Erro ao gerar relatório PDF");
     }
-    
-    doc.save(`relatorio_crises_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success("Relatório PDF exportado com sucesso!");
   };
 
   const exportSQL = () => {
