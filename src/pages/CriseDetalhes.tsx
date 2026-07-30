@@ -51,6 +51,7 @@ interface Midia {
     id: number;
     tipo_midia: string;
     url: string;
+    transcricao_texto?: string;
 }
 
 interface Voluntario {
@@ -594,12 +595,25 @@ const CriseDetalhesPage = () => {
                                                     </div>
                                                 )}
                                                 {midia.tipo_midia === 'audio' && (
-                                                    <div className="relative overflow-hidden rounded-lg bg-orange-50 border border-orange-200 aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-orange-100 transition-colors">
-                                                        <Headphones className="h-12 w-12 text-orange-500" />
-                                                        <span className="text-xs text-orange-700 mt-2">{t('audio')}</span>
-                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <Play className="h-8 w-8 text-white" />
+                                                    <div className="space-y-2">
+                                                        <div className="relative overflow-hidden rounded-lg bg-orange-50 border border-orange-200 aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-orange-100 transition-colors">
+                                                            <Headphones className="h-12 w-12 text-orange-500" />
+                                                            <span className="text-xs text-orange-700 mt-2">{t('audio')}</span>
+                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                <Play className="h-8 w-8 text-white" />
+                                                            </div>
                                                         </div>
+                                                        {midia.transcricao_texto && (
+                                                            <div className="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-lg">
+                                                                <div className="flex items-center gap-1.5 mb-1">
+                                                                    <Headphones className="h-3.5 w-3.5 text-purple-600" />
+                                                                    <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider">
+                                                                        🎙️ Transcrição do Áudio
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-foreground italic">"{midia.transcricao_texto}"</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                                 {midia.tipo_midia === 'documento' && (
